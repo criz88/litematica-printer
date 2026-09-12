@@ -18,7 +18,6 @@ import net.minecraft.core.Direction;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.LiquidBlock;
 import net.minecraft.world.level.block.state.BlockState;
-import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 
@@ -105,9 +104,18 @@ public class BreakUtils {
                 breakQueue.clear();
                 breakSet.clear();
             }
-            if (breakPos != null) {
-                breakPos = null;
-            }
+            stopBreaking();
+        }
+    }
+
+    private void stopBreaking() {
+        BlockPos pos = breakPos;
+        // 先释放目标，让 keepPrinterMining 不再拦截原版的取消挖掘和裂纹清理。
+        breakPos = null;
+        if (pos == null || client.player == null || client.level == null || client.gameMode == null) return;
+        MultiPlayerGameModeExtension gameMode = (MultiPlayerGameModeExtension) client.gameMode;
+        if (gameMode.litematica_printer$isDestroying() && pos.equals(gameMode.litematica_printer$destroyBlockPos())) {
+            client.gameMode.stopDestroyBlock();
         }
     }
 
@@ -134,11 +142,6 @@ public class BreakUtils {
                 if (!PlayerUtils.canInteracted(pos) || !canBreakBlock(pos) || !breakRestriction(level.getBlockState(pos))) {
                     continue;
                 }
-                if (ModUtils.isTweakerooLoaded()) {
-                    if (ModUtils.isToolSwitchEnabled()) {
-                        ModUtils.trySwitchToEffectiveTool(pos);
-                    }
-                }
                 BlockBreakResult breakResult = continueDestroyBlock(pos, Direction.DOWN);
                 if (breakResult == BlockBreakResult.IN_PROGRESS) {
                     breakPos = pos;
@@ -153,7 +156,12 @@ public class BreakUtils {
     }
 
     public BlockBreakResult continueDestroyBlock(final BlockPos blockPos, Direction direction, boolean localPrediction) {
-        MultiPlayerGameModeExtension gameMode = (@Nullable MultiPlayerGameModeExtension) client.gameMode;
+        // 所有入口（新目标、队列和持续挖掘）在切工具或发送数据包前复查当前位置。
+        if (client.player == null || client.level == null || client.gameMode == null || !PlayerUtils.canInteracted(blockPos)) {
+            if (isBreaking(blockPos)) stopBreaking();
+            return BlockBreakResult.FAILED;
+        }
+        MultiPlayerGameModeExtension gameMode = (MultiPlayerGameModeExtension) client.gameMode;
         BlockBreakResult result = gameMode.litematica_printer$continueDestroyBlock(localPrediction, blockPos, direction);
         if (result == BlockBreakResult.IN_PROGRESS) {
             breakPos = blockPos;

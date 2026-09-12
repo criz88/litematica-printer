@@ -66,6 +66,11 @@ public class IteratorManager {
         double effectiveRange = ConfigUtils.getEffectiveRange();
         int currentRange = (int) Math.ceil(effectiveRange);
 
+        // 扫描区域可以复用，但可达性必须使用本次更新的位置和配置。
+        this.eyePos = player.getEyePosition();
+        this.effectiveRange = effectiveRange;
+        this.shapeType = Configs.Core.ITERATOR_SHAPE.getOptionListValue() instanceof RadiusShapeType s ? s : null;
+
         LayerRange layerRange = DataManager.getRenderLayerRange();
         LayerMode layerMode = layerRange.getLayerMode();
         Direction.Axis layerAxis = layerRange.getAxis();
@@ -159,10 +164,6 @@ public class IteratorManager {
             box.xIncrement = !Configs.Core.X_REVERSE.getBooleanValue();
             box.yIncrement = !Configs.Core.Y_REVERSE.getBooleanValue();
             box.zIncrement = !Configs.Core.Z_REVERSE.getBooleanValue();
-
-            this.shapeType = Configs.Core.ITERATOR_SHAPE.getOptionListValue() instanceof RadiusShapeType s ? s : null;
-            this.eyePos = player.getEyePosition();
-            this.effectiveRange = effectiveRange;
 
             cachedIterator = null;
             dirtyIterator = true;
