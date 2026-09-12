@@ -108,6 +108,19 @@ public class BreakUtils {
         }
     }
 
+    /** Cancel queued and ongoing operations when exclusive mode ownership changes. */
+    public void cancelAll() {
+        breakQueue.clear();
+        breakSet.clear();
+        stopBreaking();
+    }
+
+    public void cancelAt(BlockPos pos) {
+        if (isBreaking(pos)) stopBreaking();
+        breakQueue.removeIf(pos::equals);
+        breakSet.remove(pos);
+    }
+
     private void stopBreaking() {
         BlockPos pos = breakPos;
         // 先释放目标，让 keepPrinterMining 不再拦截原版的取消挖掘和裂纹清理。

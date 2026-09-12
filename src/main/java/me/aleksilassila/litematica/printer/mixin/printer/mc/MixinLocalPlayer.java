@@ -62,9 +62,10 @@ public class MixinLocalPlayer extends AbstractClientPlayer {
     @Inject(at = @At("HEAD"), method = "tick")
     public void tick(CallbackInfo ci) {
         ModuleManager.updateTickHandlerTime();
+        ModuleManager.prepareTick();
         BlockPosCooldownManager.INSTANCE.tick();
         BreakUtils.INSTANCE.preprocess();
-        if (BreakUtils.INSTANCE.isNeedHandle()) {
+        if (!Configs.Trench.ENABLED.getBooleanValue() && BreakUtils.INSTANCE.isNeedHandle()) {
             BreakUtils.INSTANCE.onTick();
         }
         ModuleManager.tick();

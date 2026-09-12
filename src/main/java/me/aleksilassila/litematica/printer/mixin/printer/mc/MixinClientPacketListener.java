@@ -22,6 +22,24 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(ClientPacketListener.class)
 public abstract class MixinClientPacketListener {
+    @Inject(method = "handleLevelChunkWithLight", at = @At("RETURN"))
+    private void onTrenchChunkUpdate(net.minecraft.network.protocol.game.ClientboundLevelChunkWithLightPacket packet, CallbackInfo ci) {
+        me.aleksilassila.litematica.printer.handler.ModuleManager.TRENCH.onChunkUpdate(
+                Minecraft.getInstance().level, packet.getX(), packet.getZ());
+    }
+
+    @Inject(method = "handleBlockUpdate", at = @At("RETURN"))
+    private void onTrenchBlockUpdate(ClientboundBlockUpdatePacket packet, CallbackInfo ci) {
+        me.aleksilassila.litematica.printer.handler.ModuleManager.TRENCH.onBlockUpdate(
+                Minecraft.getInstance().level, packet.getPos(), packet.getBlockState());
+    }
+
+    @Inject(method = "handleChunkBlocksUpdate", at = @At("RETURN"))
+    private void onTrenchSectionUpdate(ClientboundSectionBlocksUpdatePacket packet, CallbackInfo ci) {
+        packet.runUpdates((pos, state) -> me.aleksilassila.litematica.printer.handler.ModuleManager.TRENCH.onBlockUpdate(
+                Minecraft.getInstance().level, pos, state));
+    }
+
 
     @Inject(method = "handleSetHealth", at = @At("RETURN"))
     private void injectHealthUpdate(ClientboundSetHealthPacket packet, CallbackInfo ci) {

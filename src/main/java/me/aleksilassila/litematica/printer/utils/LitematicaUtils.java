@@ -116,6 +116,12 @@ public class LitematicaUtils {
             && z <= Math.max(box.getPos1().getZ(), box.getPos2().getZ());
     }
 
+    /** Immutable snapshot of valid original subregions, independent of the scan radius. */
+    public static List<PrinterBox> getCurrentSelectionBoxes() {
+        return getSelectionBoxes(DataManager.getSelectionManager().getCurrentSelection()).stream()
+                .filter(java.util.Objects::nonNull).filter(box -> !box.isEmpty()).toList();
+    }
+
     private static List<PrinterBox> getSelectionBoxes(AreaSelection selection) {
         if (selection == null) {
             return Collections.emptyList();

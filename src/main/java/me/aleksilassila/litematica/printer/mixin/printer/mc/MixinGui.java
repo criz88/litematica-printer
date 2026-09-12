@@ -305,10 +305,13 @@ public abstract class MixinGui {
 
         HashSet<String> modeNames = new HashSet<>();
         for (Module module : ModuleManager.VALUES) {
-            if (module.getId().equals(GUI.NAME) || module.getEnableConfig() == null || !module.getEnableConfig().getBooleanValue()) {
+            if (module.getId().equals(GUI.NAME) || !ModuleManager.isModuleActive(module)) {
                 continue;
             }
             modeNames.add(module.getEnableConfig().getPrettyName());
+            if (module == ModuleManager.TRENCH) {
+                modeNames.add(MessageUtils.translatable("litematica-printer.trench.status." + ModuleManager.TRENCH.getStatus()).getString());
+            }
         }
         RenderUtils.drawString(String.join(", ", modeNames), centerX, infoY, Color.WHITE, true, true);
     }

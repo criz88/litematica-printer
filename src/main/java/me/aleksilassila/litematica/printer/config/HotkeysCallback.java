@@ -25,11 +25,13 @@ public class HotkeysCallback {
                     Configs.Mine.ENABLED,
                     Configs.Fill.ENABLED,
                     Configs.Fluid.ENABLED,
+                    Configs.Trench.ENABLED,
                     Configs.Bedrock.ENABLED
             };
             int current = -1;
             for (int i = 0; i < modes.length; i++) {
-                if (modes[i].getBooleanValue()) {
+                if (modes[i].getBooleanValue()
+                        && (!Configs.Trench.ENABLED.getBooleanValue() || modes[i] == Configs.Trench.ENABLED)) {
                     current = i;
                     break;
                 }
@@ -47,6 +49,7 @@ public class HotkeysCallback {
                 Configs.Mine.ENABLED.setBooleanValue(false);
                 Configs.Fill.ENABLED.setBooleanValue(false);
                 Configs.Fluid.ENABLED.setBooleanValue(false);
+                Configs.Trench.ENABLED.setBooleanValue(false);
                 Configs.Bedrock.ENABLED.setBooleanValue(false);
                 Configs.Core.WORK_SWITCH.setBooleanValue(false);
                 MessageUtils.setOverlayMessage(MessageUtils.nullToEmpty("已关闭全部模式"));

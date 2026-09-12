@@ -24,6 +24,7 @@ public class ModuleManager {
     public static final Mine MINE = new Mine();
     public static final FluidRemoval FLUID_REMOVAL = new FluidRemoval();
     public static final Bedrock BEDROCK = new Bedrock();
+    public static final Trench TRENCH = new Trench();
 
     @Getter
     @Setter
@@ -32,10 +33,30 @@ public class ModuleManager {
     private static long currentHandlerTime;
 
     public static final ImmutableList<Module> VALUES = ImmutableList.of(
-            GUI, PRINT, FILL, FLUID_REMOVAL, MINE, BEDROCK
+            GUI, PRINT, FILL, FLUID_REMOVAL, MINE, TRENCH, BEDROCK
     );
 
     private static boolean lastPrinterEnabled = false;
+
+    /** Must precede BreakUtils.onTick and ActionManager.sendQueue. */
+    public static void prepareTick() {
+        if (TRENCH.prepareTick()) {
+            ActionManager.INSTANCE.clearQueue();
+            BreakUtils.INSTANCE.cancelAll();
+            PRINT.setWatingForWaterPos(null);
+            if (Configs.Trench.ENABLED.getBooleanValue()
+                    && me.aleksilassila.litematica.printer.interfaces.compat.BedrockCompat.isAvailable()
+                    && me.aleksilassila.litematica.printer.interfaces.compat.BedrockCompat.isWorking()) {
+                me.aleksilassila.litematica.printer.interfaces.compat.BedrockCompat.setWorking(false);
+            }
+        }
+    }
+
+    public static boolean isModuleActive(Module module) {
+        return module instanceof GUI || (module.getEnableConfig() != null
+                && module.getEnableConfig().getBooleanValue()
+                && (!Configs.Trench.ENABLED.getBooleanValue() || module == TRENCH));
+    }
 
     public static void tick() {
         // If TakeItOut is waiting for a server-side shulker extraction, skip
@@ -57,6 +78,10 @@ public class ModuleManager {
 
         MissingMaterialTracker.getInstance().startCycle();
 
+        if (!printerEnabled) {
+            ActionManager.INSTANCE.clearQueue();
+            return;
+        }
         if (ActionManager.INSTANCE.sendQueue(mc.player).needWaitModifyLook) {
             return;
         }
@@ -69,8 +94,9 @@ public class ModuleManager {
         }
 
         for (Module module : VALUES) {
+            if (!isModuleActive(module)) continue;
             if (!(module instanceof GUI)) {
-                if (BreakUtils.INSTANCE.isNeedHandle()) {
+                if (module != TRENCH && BreakUtils.INSTANCE.isNeedHandle()) {
                     return;
                 }
                 if (ActionManager.INSTANCE.needWaitModifyLook) {

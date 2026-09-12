@@ -40,6 +40,9 @@ public class Configs extends ConfigBuilders implements IConfigHandler {
     private static final BooleanSupplier isExcavateCustom = () -> Mine.EXCAVATE_LIMITER.getOptionListValue().equals(MiningFilterType.CUSTOM);
     private static final BooleanSupplier isExcavateWhitelist = () -> isExcavateCustom.getAsBoolean() && Mine.EXCAVATE_LIMIT.getOptionListValue().equals(UsageRestriction.ListType.WHITELIST);
     private static final BooleanSupplier isExcavateBlacklist = () -> isExcavateCustom.getAsBoolean() && Mine.EXCAVATE_LIMIT.getOptionListValue().equals(UsageRestriction.ListType.BLACKLIST);
+    private static final BooleanSupplier isTrenchCustom = () -> Trench.MINING_LIMITER.getOptionListValue().equals(MiningFilterType.CUSTOM);
+    private static final BooleanSupplier isTrenchWhitelist = () -> isTrenchCustom.getAsBoolean() && Trench.MINING_LIMIT.getOptionListValue().equals(UsageRestriction.ListType.WHITELIST);
+    private static final BooleanSupplier isTrenchBlacklist = () -> isTrenchCustom.getAsBoolean() && Trench.MINING_LIMIT.getOptionListValue().equals(UsageRestriction.ListType.BLACKLIST);
     private static final BooleanSupplier isBlocklist = () -> Fill.FILL_BLOCK_MODE.getOptionListValue().equals(FillBlockModeType.BLOCKLIST);
     private static final BooleanSupplier isHandheld = () -> Fill.FILL_BLOCK_MODE.getOptionListValue().equals(FillBlockModeType.HANDHELD);
     private static final BooleanSupplier isRemoteInventoryLoaded = ModUtils::isRemoteInventoryNextLoaded;
@@ -57,6 +60,7 @@ public class Configs extends ConfigBuilders implements IConfigHandler {
         optionSet.addAll(Mine.OPTIONS);
         optionSet.addAll(Fill.OPTIONS);
         optionSet.addAll(Fluid.OPTIONS);
+        optionSet.addAll(Trench.OPTIONS);
         optionSet.addAll(Bedrock.OPTIONS);
         optionSet.addAll(Highlight.OPTIONS);
         OPTIONS = ImmutableList.copyOf(optionSet);
@@ -79,6 +83,7 @@ public class Configs extends ConfigBuilders implements IConfigHandler {
             .addAll(Mine.OPTIONS)
             .addAll(Fill.OPTIONS)
             .addAll(Fluid.OPTIONS)
+            .addAll(Trench.OPTIONS)
             .addAll(Bedrock.OPTIONS)
             .addAll(Highlight.OPTIONS)
             .build();
@@ -600,6 +605,34 @@ public class Configs extends ConfigBuilders implements IConfigHandler {
                 FLUID_REPLACE_BLOCK_LIST,
                 FLUID_LIST
         );
+    }
+
+    public static class Trench {
+        public static final ConfigBooleanHotkeyed ENABLED = booleanHotkey("trenchEnabled")
+                .defaultValue(false).build();
+
+        public static final ConfigOptionList SELECTION_TYPE = optionList("trenchSelectionType")
+                .defaultValue(SelectionType.LITEMATICA_SELECTION).build();
+        public static final ConfigOptionList MODE = optionList("trenchMode")
+                .defaultValue(TrenchModeType.FOUR_SIDES).build();
+        public static final ConfigBoolean INCLUDE_FLOWING = booleanValue("trenchIncludeFlowing")
+                .defaultValue(true).build();
+        public static final ConfigStringList FLUID_REPLACE_BLOCK_LIST = stringListValue("trenchFluidReplaceBlockList")
+                .defaultValue(Blocks.SAND).build();
+        public static final ConfigStringList FLUID_LIST = stringListValue("trenchFluidList")
+                .defaultValue(Blocks.WATER, Blocks.LAVA).build();
+        public static final ConfigOptionList MINING_LIMITER = optionList("trenchMiningLimiter")
+                .defaultValue(MiningFilterType.CUSTOM).build();
+        public static final ConfigOptionList MINING_LIMIT = optionList("trenchMiningLimit")
+                .defaultValue(UsageRestriction.ListType.NONE).setVisible(isTrenchCustom).build();
+        public static final ConfigStringList MINING_WHITELIST = stringListValue("trenchMiningWhitelist")
+                .setVisible(isTrenchWhitelist).build();
+        public static final ConfigStringList MINING_BLACKLIST = stringListValue("trenchMiningBlacklist")
+                .setVisible(isTrenchBlacklist).build();
+        public static final ImmutableList<IConfigBase> OPTIONS = ImmutableList.of(
+                ENABLED, SELECTION_TYPE, MODE, INCLUDE_FLOWING, FLUID_REPLACE_BLOCK_LIST, FLUID_LIST,
+                MINING_LIMITER, MINING_LIMIT, MINING_WHITELIST, MINING_BLACKLIST);
+
     }
 
     public static class Bedrock {

@@ -25,10 +25,18 @@ public class Mine extends Module {
     }
 
     public static boolean mineRestriction(BlockState blockState) {
+        return mineRestriction(blockState, Configs.Mine.EXCAVATE_LIMITER.getOptionListValue(),
+                Configs.Mine.EXCAVATE_LIMIT.getOptionListValue(), Configs.Mine.EXCAVATE_WHITELIST.getStrings(),
+                Configs.Mine.EXCAVATE_BLACKLIST.getStrings());
+    }
+
+    public static boolean mineRestriction(BlockState blockState, IConfigOptionListEntry limiter,
+                                          IConfigOptionListEntry customLimit, java.util.List<String> whitelist,
+                                          java.util.List<String> blacklist) {
         if (!BreakUtils.breakRestriction(blockState)) {
             return false;
         }
-        if (Configs.Mine.EXCAVATE_LIMITER.getOptionListValue().equals(MiningFilterType.TWEAKEROO)) {
+        if (limiter.equals(MiningFilterType.TWEAKEROO)) {
             if (!ModUtils.isTweakerooLoaded()) return true;
             UsageRestriction.ListType listType = PlacementTweaks.BLOCK_TYPE_BREAK_RESTRICTION.getListType();
             if (listType == UsageRestriction.ListType.BLACKLIST) {
@@ -41,12 +49,12 @@ public class Mine extends Module {
                 return true;
             }
         } else {
-            IConfigOptionListEntry optionListValue = Configs.Mine.EXCAVATE_LIMIT.getOptionListValue();
+            IConfigOptionListEntry optionListValue = customLimit;
             if (optionListValue == UsageRestriction.ListType.BLACKLIST) {
-                return Configs.Mine.EXCAVATE_BLACKLIST.getStrings().stream()
+                return blacklist.stream()
                         .noneMatch(string -> PinYinSearchUtils.matchBlockName(string, blockState));
             } else if (optionListValue == UsageRestriction.ListType.WHITELIST) {
-                return Configs.Mine.EXCAVATE_WHITELIST.getStrings().stream()
+                return whitelist.stream()
                         .anyMatch(string -> PinYinSearchUtils.matchBlockName(string, blockState));
             } else {
                 return true;

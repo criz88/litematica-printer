@@ -98,6 +98,13 @@ public class GUI extends Module {
     }
 
     private void countPosition(BlockPos blockPos) {
+        if (Configs.Trench.ENABLED.getBooleanValue()) {
+            if (ModuleManager.TRENCH.canProcessPos(blockPos)) {
+                totalProgress.total++;
+                if (ModuleManager.TRENCH.isCorrectBlock(blockPos)) totalProgress.finished++;
+            }
+            return;
+        }
         if (Configs.Print.ENABLED.getBooleanValue()) {
             WorldSchematic schematic = SchematicWorldHandler.getSchematicWorld();
             if (schematic != null) {

@@ -84,6 +84,7 @@ public class ConfigUi extends GuiConfigsBase {
         EXCAVATE(I18n.of("category.mine")),
         FILL(I18n.of("category.fill")),
         FLUID(I18n.of("category.fluid")),
+        TRENCH(I18n.of("category.trench")),
         HIGHLIGHT(I18n.of("category.highlight"));
 
         private final I18n i18n;
@@ -110,6 +111,7 @@ public class ConfigUi extends GuiConfigsBase {
                 case EXCAVATE   -> Configs.Mine.OPTIONS;
                 case FILL       -> Configs.Fill.OPTIONS;
                 case FLUID      -> Configs.Fluid.OPTIONS;
+                case TRENCH     -> Configs.Trench.OPTIONS;
                 case HIGHLIGHT  -> Configs.Highlight.OPTIONS;
                 case HOTKEYS    -> Configs.Hotkeys.OPTIONS;
             };
