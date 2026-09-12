@@ -146,6 +146,7 @@ public class LitematicaUtils {
         int maxX = Integer.MIN_VALUE, maxY = Integer.MIN_VALUE, maxZ = Integer.MIN_VALUE;
 
         for (PrinterBox box : boxes) {
+            if (box == null || box.isEmpty()) continue;
             if (box.minX < minX) minX = box.minX;
             if (box.minY < minY) minY = box.minY;
             if (box.minZ < minZ) minZ = box.minZ;
@@ -154,6 +155,7 @@ public class LitematicaUtils {
             if (box.maxZ > maxZ) maxZ = box.maxZ;
         }
 
+        if (minX > maxX || minY > maxY || minZ > maxZ) return null;
         return new PrinterBox(minX, minY, minZ, maxX, maxY, maxZ);
     }
 

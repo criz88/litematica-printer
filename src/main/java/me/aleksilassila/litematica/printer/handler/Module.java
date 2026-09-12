@@ -165,7 +165,7 @@ public abstract class Module extends ConfigUtils {
                 BlockPos pos = waitingPos;
                 waitingPos = null;
                 scanState = ScanState.RUNNING;
-                if (pos != null && needsWork(pos)) {
+                if (pos != null && iteratorManager.isWithinRange(pos) && needsWork(pos)) {
                     executeIteration(pos, skipIteration);
                     execCount++;
                     if (maxExecs > 0 && execCount >= maxExecs) return;
@@ -177,12 +177,14 @@ public abstract class Module extends ConfigUtils {
                 if (timeLimitExceeded.get()) return;
                 if (skipIteration.get() || ActionManager.INSTANCE.needWaitModifyLook) return;
 
-                BlockPos pos = iteratorManager.next();
+                BlockPos pos = iteratorManager.nextCandidate();
                 if (pos == null) {
                     currentCycleItem = null; // 一轮扫描耗尽，重置方块分类
                     return;
                 }
 
+                // 每个原始坐标都经过外层超时检查，包括被距离过滤的位置。
+                if (!iteratorManager.isWithinRange(pos)) continue;
                 if (needsAreaCheck() && !isPosInWorkspace(pos)) continue;
 
                 boolean executed = false;

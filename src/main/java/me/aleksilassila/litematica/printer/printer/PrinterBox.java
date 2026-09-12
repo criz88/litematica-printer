@@ -6,6 +6,7 @@ import net.minecraft.core.Vec3i;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Iterator;
+import java.util.NoSuchElementException;
 import java.util.Objects;
 
 import net.minecraft.core.BlockPos;
@@ -19,30 +20,14 @@ public class PrinterBox implements Iterable<BlockPos> {
     public boolean zIncrement = true;
     public IterationOrderType iterationMode = IterationOrderType.XZY;
 
+    /** 有序的闭区间边界；任意轴 min > max 表示空范围。 */
     public PrinterBox(int minX, int minY, int minZ, int maxX, int maxY, int maxZ) {
-        this.minX = Math.min(minX, maxX);
-        this.minZ = Math.min(minZ, maxZ);
-        this.maxX = Math.max(minX, maxX);
-        this.maxZ = Math.max(minZ, maxZ);
-        int rawMinY = Math.min(minY, maxY);
-        int rawMaxY = Math.max(minY, maxY);
-        if (client.level != null) {
-            int worldMinY = client.level.getMinY();
-            int worldMaxY = client.level.getMaxY();
-            if (rawMaxY < worldMinY) {
-                this.minY = worldMinY;
-                this.maxY = worldMinY;
-            } else if (rawMinY > worldMaxY) {
-                this.minY = worldMaxY;
-                this.maxY = worldMaxY;
-            } else {
-                this.minY = Math.max(worldMinY, rawMinY);
-                this.maxY = Math.min(worldMaxY, rawMaxY);
-            }
-        } else {
-            this.minY = rawMinY;
-            this.maxY = rawMaxY;
-        }
+        this.minX = minX;
+        this.minZ = minZ;
+        this.maxX = maxX;
+        this.maxZ = maxZ;
+        this.minY = client.level != null ? Math.max(client.level.getMinY(), minY) : minY;
+        this.maxY = client.level != null ? Math.min(client.level.getMaxY(), maxY) : maxY;
     }
 
     public PrinterBox(BlockPos pos) {
@@ -50,7 +35,12 @@ public class PrinterBox implements Iterable<BlockPos> {
     }
 
     public PrinterBox(Vec3i pos1, Vec3i pos2) {
-        this(pos1.getX(), pos1.getY(), pos1.getZ(), pos2.getX(), pos2.getY(), pos2.getZ());
+        this(Math.min(pos1.getX(), pos2.getX()), Math.min(pos1.getY(), pos2.getY()), Math.min(pos1.getZ(), pos2.getZ()),
+                Math.max(pos1.getX(), pos2.getX()), Math.max(pos1.getY(), pos2.getY()), Math.max(pos1.getZ(), pos2.getZ()));
+    }
+
+    public boolean isEmpty() {
+        return minX > maxX || minY > maxY || minZ > maxZ;
     }
 
     public boolean contains(int x, int y, int z) {
@@ -62,6 +52,7 @@ public class PrinterBox implements Iterable<BlockPos> {
     }
 
     public PrinterBox expand(int expandX, int expandY, int expandZ) {
+        if (isEmpty()) return this;
         int minX = this.minX - expandX;
         int minZ = this.minZ - expandZ;
         int maxX = this.maxX + expandX;
@@ -81,7 +72,8 @@ public class PrinterBox implements Iterable<BlockPos> {
 
 
     public boolean intersects(PrinterBox other) {
-        return this.minX <= other.maxX && this.maxX >= other.minX
+        return !isEmpty() && !other.isEmpty()
+            && this.minX <= other.maxX && this.maxX >= other.minX
             && this.minY <= other.maxY && this.maxY >= other.minY
             && this.minZ <= other.maxZ && this.maxZ >= other.minZ;
     }
@@ -109,6 +101,7 @@ public class PrinterBox implements Iterable<BlockPos> {
 
         @Override
         public boolean hasNext() {
+            if (isEmpty()) return false;
             if (!initialized) return true;
             int tx = xIncrement ? maxX : minX;
             int ty = yIncrement ? maxY : minY;
@@ -118,6 +111,7 @@ public class PrinterBox implements Iterable<BlockPos> {
 
         @Override
         public BlockPos next() {
+            if (!hasNext()) throw new NoSuchElementException();
             if (!initialized) {
                 x = xIncrement ? minX : maxX;
                 y = yIncrement ? minY : maxY;

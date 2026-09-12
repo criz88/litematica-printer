@@ -32,6 +32,9 @@ public class IteratorManager {
 
     private BlockPos lastEyePos;
     private int lastExpandRange = -1;
+    private int lastWorldMinY = Integer.MIN_VALUE;
+    private int lastWorldMaxY = Integer.MIN_VALUE;
+    private int lastPlayerLayer = Integer.MIN_VALUE;
     private int lastLayerMin = Integer.MIN_VALUE;
     private int lastLayerMax = Integer.MIN_VALUE;
     private int lastLayerSingle = Integer.MIN_VALUE;
@@ -82,7 +85,14 @@ public class IteratorManager {
 
         SelectionType selectionType = selectionTypeObj instanceof SelectionType s ? s : null;
 
-        boolean needRebuild = this.box == null
+        int worldMinY = PrinterBox.client.level != null ? PrinterBox.client.level.getMinY() : Integer.MIN_VALUE;
+        int worldMaxY = PrinterBox.client.level != null ? PrinterBox.client.level.getMaxY() : Integer.MAX_VALUE;
+        int playerLayer = selectionType == SelectionType.LITEMATICA_SELECTION_BELOW_PLAYER ? (int) Math.floor(player.getY())
+                : selectionType == SelectionType.LITEMATICA_SELECTION_ABOVE_PLAYER ? (int) Math.ceil(player.getY()) : 0;
+
+        boolean needRebuild = needsRebuild || this.box == null
+                || worldMinY != lastWorldMinY || worldMaxY != lastWorldMaxY
+                || playerLayer != lastPlayerLayer
                 || !this.box.equals(lastBox)
                 || lastEyePos == null
                 || !lastEyePos.closerThan(eyeBP, effectiveRange * 0.4)
@@ -99,6 +109,9 @@ public class IteratorManager {
         if (needRebuild) {
             lastEyePos = eyeBP;
             lastExpandRange = currentRange;
+            lastWorldMinY = worldMinY;
+            lastWorldMaxY = worldMaxY;
+            lastPlayerLayer = playerLayer;
             lastLayerMin = layerMin;
             lastLayerMax = layerMax;
             lastLayerSingle = layerSingle;
@@ -115,14 +128,14 @@ public class IteratorManager {
             int minZ = (int) Math.floor(player.getZ() - effectiveRange);
             int maxZ = (int) Math.ceil(player.getZ() + effectiveRange);
 
-            // 层范围裁剪应对所有选区模式生效，而非仅限"可见层"模式
-            if (layerMode != LayerMode.ALL) {
+            // 只有可见层模式受渲染层限制；全部投影及玩家上下方保留各自范围。
+            if (selectionType == SelectionType.LITEMATICA_RENDER_LAYER && layerMode != LayerMode.ALL) {
                 switch (layerMode) {
                     case SINGLE_LAYER -> {
                         switch (layerAxis) {
-                            case Y -> { minY = layerSingle; maxY = layerSingle; }
-                            case X -> { minX = layerSingle; maxX = layerSingle; }
-                            case Z -> { minZ = layerSingle; maxZ = layerSingle; }
+                            case Y -> { minY = Math.max(minY, layerSingle); maxY = Math.min(maxY, layerSingle); }
+                            case X -> { minX = Math.max(minX, layerSingle); maxX = Math.min(maxX, layerSingle); }
+                            case Z -> { minZ = Math.max(minZ, layerSingle); maxZ = Math.min(maxZ, layerSingle); }
                         }
                     }
                     case LAYER_RANGE -> {
@@ -189,11 +202,11 @@ public class IteratorManager {
     }
 
     /**
-     * 获取下一个需要迭代的位置（已过滤形状和可达性）。
+     * 单步获取原始候选位置；调用方须在有时间预算的循环中用 isWithinRange 过滤。
      * 返回 null 表示迭代结束。
      */
     @Nullable
-    public BlockPos next() {
+    public BlockPos nextCandidate() {
         if (box == null) return null;
 
         if (cachedIterator == null) {
@@ -201,19 +214,20 @@ public class IteratorManager {
             dirtyIterator = false;
         }
 
-        while (cachedIterator.hasNext()) {
-            BlockPos pos = cachedIterator.next();
-            if (pos == null) continue;
-
-            if (shapeType != null) {
-                if (!PlayerUtils.canInteracted(pos, eyePos, effectiveRange, shapeType)) continue;
-            } else if (!PlayerUtils.canInteracted(pos)) continue;
-
-            return pos;
+        if (cachedIterator.hasNext()) {
+            return cachedIterator.next();
         }
 
         cachedIterator = null;
         return null;
+    }
+
+    /** 同时用于扫描候选和暂停后恢复的位置，避免越过当前工作范围。 */
+    public boolean isWithinRange(BlockPos pos) {
+        if (box == null || !box.contains(pos)) return false;
+        return shapeType != null
+                ? PlayerUtils.canInteracted(pos, eyePos, effectiveRange, shapeType)
+                : PlayerUtils.canInteracted(pos);
     }
 
     public boolean hasNext() {

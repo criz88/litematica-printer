@@ -68,13 +68,14 @@ public class GUI extends Module {
         }
 
         long deadline = System.currentTimeMillis() + SCAN_BUDGET_MS;
-        BlockPos pos;
-        while ((pos = iteratorManager.next()) != null) {
-            countPosition(pos);
-            if (System.currentTimeMillis() >= deadline) return;
+        while (System.currentTimeMillis() < deadline) {
+            BlockPos pos = iteratorManager.nextCandidate();
+            if (pos == null) {
+                finishScan();
+                return;
+            }
+            if (iteratorManager.isWithinRange(pos)) countPosition(pos);
         }
-
-        finishScan();
     }
 
     private void startScan() {
