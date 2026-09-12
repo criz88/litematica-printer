@@ -1,5 +1,6 @@
 import groovy.json.JsonBuilder
 import groovy.json.JsonSlurper
+import org.gradle.api.tasks.bundling.AbstractArchiveTask
 
 plugins {
     id("java-library")
@@ -26,6 +27,12 @@ fabricSubprojects.forEach {
     evaluationDependsOn(":${it.name}")
 }
 
+val subArchives = fabricSubprojects.map { sub ->
+    sub.tasks.named<AbstractArchiveTask>(
+        if (sub.plugins.hasPlugin("net.fabricmc.fabric-loom-remap")) "remapJar" else "jar"
+    )
+}
+
 tasks {
     val collectSubModules by registering {
         description = "Collect all submodules into a single jar"
@@ -40,14 +47,11 @@ tasks {
             destDirFile.deleteRecursively()
             destDirFile.mkdirs()
 
-            fabricSubprojects.forEach { sub ->
-                val subDir = sub.projectDir.resolve("build/libs")
-                if (subDir.exists() && subDir.isDirectory) {
-                    val jars = subDir.listFiles()?.filter { it.extension == "jar" } ?: return@forEach
-                    val latestJar = jars.maxByOrNull { it.lastModified() } ?: return@forEach
-                    latestJar.copyTo(destDirFile.resolve(latestJar.name), overwrite = true)
-                    println("Copied: ${latestJar.name}")
-                }
+            subArchives.forEach { archive ->
+                val jar = archive.get().archiveFile.get().asFile
+                check(jar.isFile) { "Missing submodule artifact: $jar" }
+                jar.copyTo(destDirFile.resolve(jar.name), overwrite = true)
+                println("Copied: ${jar.name}")
             }
         }
     }

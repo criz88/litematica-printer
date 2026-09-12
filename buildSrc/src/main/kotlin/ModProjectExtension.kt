@@ -51,7 +51,16 @@ val Project.javaVersion
     }
 val Project.mixinJavaVersion get() = "JAVA_${javaVersion}"
 
-val Project.fullProjectVersion: String get() = getFullProjectVersion(modVersion)
+val Project.fullProjectVersion: String
+    get() {
+        // One version per build, shared by archive names, metadata and all subprojects.
+        val properties = rootProject.extensions.extraProperties
+        val key = "litematicaPrinterBuildVersion"
+        if (!properties.has(key)) {
+            properties.set(key, getFullProjectVersion(rootProject.modVersion, rootProject.projectDir))
+        }
+        return properties.get(key) as String
+    }
 
 private fun getCommitCountNumber(workDir: File = File(".")): Int? {
     return try {
@@ -68,8 +77,8 @@ private fun getCommitCountNumber(workDir: File = File(".")): Int? {
     }
 }
 
-private fun getFullProjectVersion(modVersion: String): String {
-    val commitCount     = getCommitCountNumber()
+private fun getFullProjectVersion(modVersion: String, workDir: File): String {
+    val commitCount     = getCommitCountNumber(workDir)
     val commitHash      = System.getenv("COMMIT_HASH")
     val isRelease       = System.getenv("IS_THIS_RELEASE")?.toBoolean() == true
     val isPR            = System.getenv("PR_BUILD")?.toBoolean() == true
