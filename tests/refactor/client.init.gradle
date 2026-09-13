@@ -1,0 +1,71 @@
+// Actual Fabric client tests in an isolated build directory. Run one target at a time.
+def target = gradle.startParameter.projectProperties['refactorGameVersion'] ?: '1.21.4'
+def minimal = gradle.startParameter.projectProperties['refactorMinimalMods'] == 'true'
+def optionalModsDir = gradle.startParameter.projectProperties['refactorOptionalModsDir']
+def pluginServerDir = gradle.startParameter.projectProperties['refactorPluginServerDir']
+gradle.beforeProject { p ->
+    if (p.path != ":${target}" && p.path != ':' && p.path != ':fabricWrapper') {
+        p.pluginManager.withPlugin('java') { p.sourceSets.maybeCreate('gametest') }
+    }
+    if (p.path != ":${target}") return
+    // Run after the build script declares Minecraft; early source-set setup can cache
+    // Loom's obfuscation mode before the selected version is known.
+    p.afterEvaluate {
+        p.fabricApi.configureTests {
+            createSourceSet = true
+            modId = 'printer-refactor-gametest'
+            enableGameTests = false
+            enableClientGameTests = true
+            clearRunDirectory = false
+            username = 'PrinterRefactor'
+        }
+        if (optionalModsDir) {
+            p.dependencies.add('gametestRuntimeOnly', p.files(p.fileTree(optionalModsDir) { include('*.jar') }))
+        }
+        def sources = p.tasks.register('prepareRefactorClientSources', Sync) {
+            from(new File(p.rootDir, 'tests/refactor/client/java')) {
+                if (target.startsWith('26.')) exclude('**/PluginShulkerGameTest.java')
+            }
+            into(p.layout.buildDirectory.dir('refactor/client-sources'))
+            filter { line ->
+                if (!target.startsWith('26.')) return line
+                line.replace('v1.ClientGameTestContext', 'v1.context.ClientGameTestContext')
+                    .replace('getClientWorld()', 'getClientLevel()')
+            }
+        }
+        p.sourceSets.gametest.java.setSrcDirs([sources])
+        p.sourceSets.gametest.resources.setSrcDirs([new File(p.rootDir, 'tests/refactor/client/resources')])
+        p.tasks.named('processGametestResources') {
+            inputs.property('refactorMinimalMods', minimal)
+            inputs.property('refactorOptionalModsDir', optionalModsDir ?: '')
+            inputs.property('refactorPluginServerDir', pluginServerDir ?: '')
+            filesMatching('fabric.mod.json') {
+                filter { line ->
+                    if (pluginServerDir && line.contains('"fabric-client-gametest"'))
+                        return '    "fabric-client-gametest": ["refactor.PluginShulkerGameTest"]'
+                    if (!optionalModsDir) line = line.replace(', "refactor.OptionalIntegrationGameTest"', '')
+                    if (minimal) line = line.replace(', "refactor.RemoteContainerGameTest"', '')
+                            .replace(', "refactor.ShulkerGameTest"', '')
+                    line
+                }
+            }
+        }
+        if (minimal) {
+            def runtime = p.sourceSets.gametest.runtimeClasspath
+            p.sourceSets.gametest.runtimeClasspath = runtime.filter { file ->
+                !['tweakeroo', 'quickshulker', 'remote-inventory-next', 'modmenu', 'conditional-mixin']
+                    .any { name -> file.name.toLowerCase().contains(name) }
+            }
+        }
+        p.loom.runs.named('clientGameTest') {
+            runDirectory.set(p.layout.buildDirectory.dir('refactor/client-game-test'))
+        }
+        p.tasks.named('runClientGameTest') {
+            javaLauncher.set(p.javaToolchains.launcherFor {
+                languageVersion.set(JavaLanguageVersion.of(target.startsWith('26.') ? 25 : 21))
+            })
+            jvmArgs('-Dfabric.client.gametest.disableNetworkSynchronizer=true')
+            if (pluginServerDir) jvmArgs("-Drefactor.pluginServerDir=${pluginServerDir}")
+        }
+    }
+}
