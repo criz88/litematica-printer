@@ -121,14 +121,7 @@ public class InventoryUtils {
         if (InventoryUtilsAccessor.getPICK_BLOCKABLE_SLOTS().isEmpty()) {
             return PickResult.FAIL_NO_PICK_SLOTS_CONFIGURED;
         }
-        // 寻找可用槽位
-        int hotbarSlot = sourceSlot;
-        if (sourceSlot == -1 || !Inventory.isHotbarSlot(sourceSlot)) {
-            hotbarSlot = InventoryUtilsAccessor.getEmptyPickBlockableHotbarSlot(inventory);
-        }
-        if (hotbarSlot == -1) {
-            hotbarSlot = InventoryUtilsAccessor.getPickBlockTargetSlot(player);
-        }
+        int hotbarSlot = findPickTargetSlot(player, inventory);
         // 无可用槽位 → 精准失败类型；否则成功
         return hotbarSlot != -1 ? PickResult.SUCCESS : PickResult.FAIL_NO_SUITABLE_SLOT_FOUND;
     }
@@ -146,15 +139,7 @@ public class InventoryUtils {
             showMessageWithCooldown(Message.MessageType.WARNING, "litematica.message.warn.pickblock.no_valid_slots_configured");
             return false;
         }
-        int hotbarSlot = sourceSlot;
-        // 尝试寻找一个空的可拾取方块的热键栏槽位
-        if (sourceSlot == -1 || !Inventory.isHotbarSlot(sourceSlot)) {
-            hotbarSlot = InventoryUtilsAccessor.getEmptyPickBlockableHotbarSlot(inventory);
-        }
-        // 如果没有空槽位，则寻找一个可拾取方块的热键栏槽位
-        if (hotbarSlot == -1) {
-            hotbarSlot = InventoryUtilsAccessor.getPickBlockTargetSlot(player);
-        }
+        int hotbarSlot = findPickTargetSlot(player, inventory);
         if (hotbarSlot != -1) {
             setHotbarSlot(hotbarSlot, inventory);
             if (EntityUtils.isCreativeMode(player)) {
@@ -168,6 +153,12 @@ public class InventoryUtils {
             showMessageWithCooldown(Message.MessageType.WARNING, "litematica.message.warn.pickblock.no_suitable_slot_found");
             return false;
         }
+    }
+
+    /** Called only after the source-hotbar and configured-slot checks. */
+    private static int findPickTargetSlot(Player player, Inventory inventory) {
+        int emptySlot = InventoryUtilsAccessor.getEmptyPickBlockableHotbarSlot(inventory);
+        return emptySlot != -1 ? emptySlot : InventoryUtilsAccessor.getPickBlockTargetSlot(player);
     }
 
     public static boolean swapItemToMainHand(ItemStack stackReference, Minecraft mc) {
