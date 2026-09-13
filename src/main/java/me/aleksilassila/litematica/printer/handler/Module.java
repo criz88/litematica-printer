@@ -9,6 +9,7 @@ import me.aleksilassila.litematica.printer.printer.*;
 import me.aleksilassila.litematica.printer.utils.ConfigUtils;
 import me.aleksilassila.litematica.printer.utils.LitematicaUtils;
 import me.aleksilassila.litematica.printer.utils.PlayerUtils;
+import me.aleksilassila.litematica.printer.utils.QuickShulkerUtils;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.multiplayer.ClientPacketListener;
@@ -218,7 +219,7 @@ public abstract class Module extends ConfigUtils {
     }
 
     private boolean shouldPauseScan() {
-        return skipIteration.get() || ActionManager.INSTANCE.needWaitModifyLook;
+        return QuickShulkerUtils.isOpenHandler() || skipIteration.get() || ActionManager.INSTANCE.needWaitModifyLook;
     }
 
     private void updateGuiInfo(BlockPos pos, boolean executed) {
