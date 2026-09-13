@@ -5,6 +5,7 @@ import me.aleksilassila.litematica.printer.Reference;
 import me.aleksilassila.litematica.printer.config.Configs;
 import me.aleksilassila.litematica.printer.mixin.extension.MultiPlayerGameModeExtension;
 import me.aleksilassila.litematica.printer.utils.BlockUtils;
+import me.aleksilassila.litematica.printer.utils.InventoryUtils;
 import me.aleksilassila.litematica.printer.utils.PacketUtils;
 import me.aleksilassila.litematica.printer.utils.PlayerUtils;
 import net.minecraft.client.player.LocalPlayer;
@@ -59,7 +60,8 @@ public class ActionManager {
     public ActionManager sendQueue(LocalPlayer player) {
         // 排队等待转向后，工作位置和实际点击的支撑方块都必须仍在范围内。
         if (player == null || target == null || side == null || hitModifier == null
-                || !PlayerUtils.canInteracted(workPos) || !PlayerUtils.canInteracted(target)) {
+                || !PlayerUtils.canInteracted(workPos) || !PlayerUtils.canInteracted(target)
+                || InventoryUtils.isNonEmptyShulkerBox(player.getMainHandItem())) {
             clearQueue();
             return this;
         }
