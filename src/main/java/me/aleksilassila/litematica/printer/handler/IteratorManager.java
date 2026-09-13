@@ -31,21 +31,8 @@ public class IteratorManager {
     private double effectiveRange;
 
     private BlockPos lastEyePos;
-    private int lastExpandRange = -1;
-    private int lastWorldMinY = Integer.MIN_VALUE;
-    private int lastWorldMaxY = Integer.MIN_VALUE;
-    private int lastPlayerLayer = Integer.MIN_VALUE;
-    private int lastLayerMin = Integer.MIN_VALUE;
-    private int lastLayerMax = Integer.MIN_VALUE;
-    private int lastLayerSingle = Integer.MIN_VALUE;
-    private int lastLayerAbove = Integer.MIN_VALUE;
-    private int lastLayerBelow = Integer.MIN_VALUE;
     @Nullable
-    private Direction.Axis lastLayerAxis = null;
-    @Nullable
-    private LayerMode lastLayerMode = null;
-    @Nullable
-    private SelectionType lastSelectionType = null;
+    private BoxSettings lastSettings;
     @Nullable
     private PrinterBox lastBox;
 
@@ -90,87 +77,35 @@ public class IteratorManager {
         int playerLayer = selectionType == SelectionType.LITEMATICA_SELECTION_BELOW_PLAYER ? (int) Math.floor(player.getY())
                 : selectionType == SelectionType.LITEMATICA_SELECTION_ABOVE_PLAYER ? (int) Math.ceil(player.getY()) : 0;
 
+        LayerSettings layers = new LayerSettings(layerMode, layerAxis, layerMin, layerMax,
+                layerSingle, layerAbove, layerBelow);
+        BoxSettings settings = new BoxSettings(currentRange, worldMinY, worldMaxY, playerLayer, layers, selectionType);
         boolean needRebuild = needsRebuild || this.box == null
-                || worldMinY != lastWorldMinY || worldMaxY != lastWorldMaxY
-                || playerLayer != lastPlayerLayer
+                || !settings.equals(lastSettings)
                 || !this.box.equals(lastBox)
                 || lastEyePos == null
-                || !lastEyePos.closerThan(eyeBP, effectiveRange * 0.4)
-                || lastExpandRange != currentRange
-                || layerMin != lastLayerMin
-                || layerMax != lastLayerMax
-                || layerSingle != lastLayerSingle
-                || layerAbove != lastLayerAbove
-                || layerBelow != lastLayerBelow
-                || layerAxis != lastLayerAxis
-                || layerMode != lastLayerMode
-                || selectionType != lastSelectionType;
+                || !lastEyePos.closerThan(eyeBP, effectiveRange * 0.4);
 
         if (needRebuild) {
             lastEyePos = eyeBP;
-            lastExpandRange = currentRange;
-            lastWorldMinY = worldMinY;
-            lastWorldMaxY = worldMaxY;
-            lastPlayerLayer = playerLayer;
-            lastLayerMin = layerMin;
-            lastLayerMax = layerMax;
-            lastLayerSingle = layerSingle;
-            lastLayerAbove = layerAbove;
-            lastLayerBelow = layerBelow;
-            lastLayerAxis = layerAxis;
-            lastLayerMode = layerMode;
-            lastSelectionType = selectionType;
+            lastSettings = settings;
 
-            int minX = (int) Math.floor(player.getX() - effectiveRange);
-            int maxX = (int) Math.ceil(player.getX() + effectiveRange);
-            int minY = (int) Math.floor(player.getEyeY() - effectiveRange);
-            int maxY = (int) Math.ceil(player.getEyeY() + effectiveRange);
-            int minZ = (int) Math.floor(player.getZ() - effectiveRange);
-            int maxZ = (int) Math.ceil(player.getZ() + effectiveRange);
-
-            // 只有可见层模式受渲染层限制；全部投影及玩家上下方保留各自范围。
+            ScanBounds bounds = new ScanBounds(player.getX(), player.getEyeY(), player.getZ(), effectiveRange);
+            // Only visible-layer selections are clipped to the render layer.
             if (selectionType == SelectionType.LITEMATICA_RENDER_LAYER && layerMode != LayerMode.ALL) {
                 switch (layerMode) {
-                    case SINGLE_LAYER -> {
-                        switch (layerAxis) {
-                            case Y -> { minY = Math.max(minY, layerSingle); maxY = Math.min(maxY, layerSingle); }
-                            case X -> { minX = Math.max(minX, layerSingle); maxX = Math.min(maxX, layerSingle); }
-                            case Z -> { minZ = Math.max(minZ, layerSingle); maxZ = Math.min(maxZ, layerSingle); }
-                        }
-                    }
-                    case LAYER_RANGE -> {
-                        switch (layerAxis) {
-                            case Y -> { minY = Math.max(minY, layerMin); maxY = Math.min(maxY, layerMax); }
-                            case X -> { minX = Math.max(minX, layerMin); maxX = Math.min(maxX, layerMax); }
-                            case Z -> { minZ = Math.max(minZ, layerMin); maxZ = Math.min(maxZ, layerMax); }
-                        }
-                    }
-                    case ALL_BELOW -> {
-                        switch (layerAxis) {
-                            case Y -> maxY = Math.min(maxY, layerBelow);
-                            case X -> maxX = Math.min(maxX, layerBelow);
-                            case Z -> maxZ = Math.min(maxZ, layerBelow);
-                        }
-                    }
-                    case ALL_ABOVE -> {
-                        switch (layerAxis) {
-                            case Y -> minY = Math.max(minY, layerAbove);
-                            case X -> minX = Math.max(minX, layerAbove);
-                            case Z -> minZ = Math.max(minZ, layerAbove);
-                        }
-                    }
+                    case SINGLE_LAYER -> bounds.clip(layerAxis, layerSingle, layerSingle);
+                    case LAYER_RANGE -> bounds.clip(layerAxis, layerMin, layerMax);
+                    case ALL_BELOW -> bounds.clip(layerAxis, Integer.MIN_VALUE, layerBelow);
+                    case ALL_ABOVE -> bounds.clip(layerAxis, layerAbove, Integer.MAX_VALUE);
                 }
             }
-
-            if (selectionType != null) {
-                if (selectionType == SelectionType.LITEMATICA_SELECTION_BELOW_PLAYER) {
-                    maxY = Math.min(maxY, (int) Math.floor(player.getY()));
-                } else if (selectionType == SelectionType.LITEMATICA_SELECTION_ABOVE_PLAYER) {
-                    minY = Math.max(minY, (int) Math.ceil(player.getY()));
-                }
+            if (selectionType == SelectionType.LITEMATICA_SELECTION_BELOW_PLAYER) {
+                bounds.clip(Direction.Axis.Y, Integer.MIN_VALUE, (int) Math.floor(player.getY()));
+            } else if (selectionType == SelectionType.LITEMATICA_SELECTION_ABOVE_PLAYER) {
+                bounds.clip(Direction.Axis.Y, (int) Math.ceil(player.getY()), Integer.MAX_VALUE);
             }
-
-            box = new PrinterBox(minX, minY, minZ, maxX, maxY, maxZ);
+            box = bounds.toBox();
             lastBox = box;
 
             box.iterationMode = (IterationOrderType) Configs.Core.ITERATION_ORDER.getOptionListValue();
@@ -188,6 +123,13 @@ public class IteratorManager {
         this.needsRebuild = false;
         return false;
     }
+
+    /** Exact rebuild inputs; eye movement keeps its separate distance threshold. */
+    private record BoxSettings(int expandedRange, int worldMinY, int worldMaxY, int playerLayer,
+                               LayerSettings layers, @Nullable SelectionType selectionType) {}
+
+    private record LayerSettings(LayerMode mode, Direction.Axis axis, int min, int max,
+                                 int single, int above, int below) {}
 
     public void markNeedsRebuild() {
         this.needsRebuild = true;
