@@ -43,11 +43,9 @@ public class RemoteContainerUtils {
 
     // 每种物品的取物进度：先查缓存，缓存 miss 后渐进扫描容器
     private static class ItemFetchState {
-        final String itemId;
         int scanIndex;
         boolean triedCache;
         boolean requestPending;
-        ItemFetchState(String itemId) { this.itemId = itemId; }
         void reset() { triedCache = false; scanIndex = 0; requestPending = false; }
     }
 
@@ -81,7 +79,7 @@ public class RemoteContainerUtils {
         PendingExchange pending = pendingExchange;
         pendingExchange = null;
         if (pending == null) {
-            for (ItemFetchState s : fetchStates.values()) s.requestPending = false;
+            clearPendingRequests();
             return;
         }
 
@@ -89,6 +87,17 @@ public class RemoteContainerUtils {
 
         String dim = getCurrentDimension();
 
+        recordReturnedItems(pending, dim, returnedCount);
+        recordTakenItems(pending, dim, takeResult, takenCount);
+
+        clearPendingRequests();
+    }
+
+    private static void clearPendingRequests() {
+        for (ItemFetchState state : fetchStates.values()) state.requestPending = false;
+    }
+
+    private static void recordReturnedItems(PendingExchange pending, String dim, int returnedCount) {
         // tracker: 全部还回则移除条目；缓存: 记录归还数量
         if (returnedCount > 0 && !pending.returnItemId().isEmpty()) {
             if (returnedCount >= pending.returnRequested())
@@ -96,7 +105,9 @@ public class RemoteContainerUtils {
                         dim, pending.returnPos(), pending.returnItemId(), 0));
             ContainerItemCache.INSTANCE.recordReturn(dim, pending.returnPos(), pending.returnItemId(), returnedCount);
         }
+    }
 
+    private static void recordTakenItems(PendingExchange pending, String dim, ResultType takeResult, int takenCount) {
         // tracker: 全部还回则移除条目；缓存: 记录取物数量
         if (takenCount > 0 && !pending.takeItemId().isEmpty()) {
             ContainerReturnTracker.INSTANCE.track(dim, pending.takePos(), pending.takeItemId());
@@ -109,8 +120,6 @@ public class RemoteContainerUtils {
                 && takeResult != ResultType.PARTIAL) {
             ContainerItemCache.INSTANCE.invalidate(dim, pending.takePos());
         }
-
-        for (ItemFetchState s : fetchStates.values()) s.requestPending = false;
     }
 
     public static void scanContainerPos() {
@@ -153,7 +162,7 @@ public class RemoteContainerUtils {
         if (knownContainers.isEmpty()) { scanContainerPos(); if (knownContainers.isEmpty()) return false; }
 
         String itemId = getItemId(item);
-        ItemFetchState state = fetchStates.computeIfAbsent(itemId, ItemFetchState::new);
+        ItemFetchState state = fetchStates.computeIfAbsent(itemId, ignored -> new ItemFetchState());
         if (state.requestPending || pendingExchange != null) return true;
 
         if (!state.triedCache) {
@@ -191,21 +200,11 @@ public class RemoteContainerUtils {
                 && Configs.Print.RETURN_TO_CONTAINER_WHEN_FULL.getBooleanValue()) {
             cleanStaleTracker();
 
-            String currentDim = getCurrentDimension();
-            ContainerReturnTracker.ReturnEntry best = null;
-            int bestPass = Integer.MAX_VALUE, bestCount = Integer.MAX_VALUE;
-            for (ContainerReturnTracker.ReturnEntry e : ContainerReturnTracker.INSTANCE.peekAll()) {
-                if (!currentDim.equals(e.dimension())) continue;
-                Item retItem = resolveItem(e.itemId());
-                if (retItem == null) continue;
-                int invCount = countInInventory(retItem);
-                if (invCount <= 0) continue;
-                if (e.pass() < bestPass || (e.pass() == bestPass && invCount < bestCount)) {
-                    bestPass = e.pass(); bestCount = invCount; best = e;
-                }
-            }
-            if (best != null) {
-                returnPos = best.pos(); returnItemId = best.itemId(); returnCount = bestCount;
+            ReturnCandidate candidate = findReturnCandidate(getCurrentDimension());
+            if (candidate != null) {
+                returnPos = candidate.entry().pos();
+                returnItemId = candidate.entry().itemId();
+                returnCount = candidate.count();
             }
         }
 
@@ -213,6 +212,24 @@ public class RemoteContainerUtils {
                 returnPos, returnItemId, returnCount);
         RemoteInventoryClient.sendExchange(takePos, takeItemId, takeSlot,
                 returnPos, returnItemId, returnCount);
+    }
+
+    private record ReturnCandidate(ContainerReturnTracker.ReturnEntry entry, int count) {}
+
+    private static ReturnCandidate findReturnCandidate(String currentDim) {
+        ContainerReturnTracker.ReturnEntry best = null;
+        int bestPass = Integer.MAX_VALUE, bestCount = Integer.MAX_VALUE;
+        for (ContainerReturnTracker.ReturnEntry e : ContainerReturnTracker.INSTANCE.peekAll()) {
+            if (!currentDim.equals(e.dimension())) continue;
+            Item retItem = resolveItem(e.itemId());
+            if (retItem == null) continue;
+            int invCount = countInInventory(retItem);
+            if (invCount <= 0) continue;
+            if (e.pass() < bestPass || (e.pass() == bestPass && invCount < bestCount)) {
+                bestPass = e.pass(); bestCount = invCount; best = e;
+            }
+        }
+        return best == null ? null : new ReturnCandidate(best, bestCount);
     }
 
     private static void cleanStaleTracker() {
@@ -244,7 +261,7 @@ public class RemoteContainerUtils {
         ContainerItemCache.INSTANCE.updateContainer(
                 payload.dimension(), payload.pos(), payload.entries()
         );
-        for (ItemFetchState s : fetchStates.values()) s.requestPending = false;
+        clearPendingRequests();
     }
 
     private static String getItemId(Item item) {

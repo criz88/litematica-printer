@@ -30,6 +30,8 @@ import net.minecraft.network.HashedStack;
 
 import java.util.*;
 
+import static me.aleksilassila.litematica.printer.utils.ShulkerContents.*;
+
 public class QuickShulkerUtils {
     private static final Minecraft mc = Minecraft.getInstance();
     private static final boolean QUICK_SHULKER_LOADED = FabricLoader.getInstance().isModLoaded("quickshulker");
@@ -47,9 +49,7 @@ public class QuickShulkerUtils {
     private static final List<TrackedShulker> trackedShulkers = new ArrayList<>();
     private static ReturnRequest activeReturnRequest;
     private static TrackedShulker activeShulker;
-    private static int deferredCloseTicks;
-    private static int deferredCloseRetries;
-    private static final int MAX_DEFERRED_CLOSE_RETRIES = 10;
+    private static final DeferredContainerClose deferredClose = new DeferredContainerClose();
 
     private QuickShulkerUtils() {}
 
@@ -57,18 +57,7 @@ public class QuickShulkerUtils {
         if (shulkerCooldown > 0) {
             shulkerCooldown--;
         }
-        if (deferredCloseTicks > 0 && --deferredCloseTicks == 0) {
-            LocalPlayer player = mc.player;
-            if (player == null || player.containerMenu.equals(player.inventoryMenu)) {
-                deferredCloseRetries = 0;
-            } else if (player.containerMenu.getCarried().isEmpty()
-                    || ++deferredCloseRetries >= MAX_DEFERRED_CLOSE_RETRIES) {
-                player.closeContainer();
-                deferredCloseRetries = 0;
-            } else {
-                deferredCloseTicks = 1;
-            }
-        }
+        deferredClose.tick(mc);
     }
 
     public static void addLastNeedItem(Item item) {
@@ -106,29 +95,13 @@ public class QuickShulkerUtils {
 
         if (Configs.Print.RETURN_TO_SHULKER_WHEN_FULL.getBooleanValue()
                 && isInventoryFull(inventory)) {
-            ReturnRequest returnRequest = itemsToReturn.peekFirst();
-            if (returnRequest == null) return false;
-
-            int shulkerSlot = findReturnShulker(inventory, returnRequest);
-            if (shulkerSlot == -1) return false;
-
-            activeReturnRequest = returnRequest;
-            activeShulker = returnRequest.shulker();
-            return openSelectedShulker(inventory, shulkerSlot, source);
+            return requestReturn(player, inventory, source, true);
         }
 
         // 不开启精确回塞时，只要有 itemsToReturn 就尝试回塞到任意有空位的潜影盒
         if (!Configs.Print.RETURN_TO_SHULKER_WHEN_FULL.getBooleanValue()
                 && isInventoryFull(inventory)) {
-            ReturnRequest returnRequest = itemsToReturn.peekFirst();
-            if (returnRequest == null) return false;
-
-            int shulkerSlot = findAnyShulker(player);
-            if (shulkerSlot == -1) return false;
-
-            activeReturnRequest = returnRequest;
-            activeShulker = null;
-            return openSelectedShulker(inventory, shulkerSlot, source);
+            return requestReturn(player, inventory, source, false);
         }
 
         for (Item item : items) {
@@ -148,6 +121,16 @@ public class QuickShulkerUtils {
             }
         }
         return false;
+    }
+
+    private static boolean requestReturn(LocalPlayer player, Inventory inventory, ShulkerSource source, boolean exact) {
+        ReturnRequest request = itemsToReturn.peekFirst();
+        if (request == null) return false;
+        int slot = exact ? findReturnShulker(inventory, request) : findAnyShulker(player);
+        if (slot == -1) return false;
+        activeReturnRequest = request;
+        activeShulker = exact ? request.shulker() : null;
+        return openSelectedShulker(inventory, slot, source);
     }
 
     private static boolean openSelectedShulker(Inventory inventory, int shulkerSlot, ShulkerSource source) {
@@ -343,12 +326,10 @@ public class QuickShulkerUtils {
     private static void finishShulkerOperation(LocalPlayer player) {
         boolean wasReturn = activeReturnRequest != null;
         if (player == null) {
-            deferredCloseTicks = 2;
-            deferredCloseRetries = 0;
+            deferredClose.schedule();
         } else {
             player.closeContainer();
-            deferredCloseTicks = 0;
-            deferredCloseRetries = 0;
+            deferredClose.cancel();
         }
         shulkerBoxSlot = -1;
         isOpenHandler = false;
@@ -451,46 +432,6 @@ public class QuickShulkerUtils {
         return null;
     }
 
-    private static List<ItemStack> getShulkerContents(ItemStack stack) {
-        return copyNonEmptyStacks(fi.dy.masa.malilib.util.InventoryUtils.getStoredItems(stack, -1));
-    }
-
-    private static List<ItemStack> getContainerContents(AbstractContainerMenu container, int ownSlots) {
-        List<ItemStack> contents = new ArrayList<>();
-        for (int i = 0; i < ownSlots; i++) {
-            ItemStack stack = container.slots.get(i).getItem();
-            if (!stack.isEmpty()) contents.add(stack.copy());
-        }
-        return contents;
-    }
-
-    private static List<ItemStack> copyNonEmptyStacks(List<ItemStack> stacks) {
-        List<ItemStack> copies = new ArrayList<>();
-        for (ItemStack stack : stacks) {
-            if (!stack.isEmpty()) copies.add(stack.copy());
-        }
-        return copies;
-    }
-
-    private static boolean sameContents(List<ItemStack> first, List<ItemStack> second) {
-        if (first.size() != second.size()) return false;
-
-        boolean[] matched = new boolean[second.size()];
-        for (ItemStack firstStack : first) {
-            boolean found = false;
-            for (int i = 0; i < second.size(); i++) {
-                if (!matched[i] && fi.dy.masa.malilib.util.InventoryUtils
-                        .areStacksEqual(firstStack, second.get(i))) {
-                    matched[i] = true;
-                    found = true;
-                    break;
-                }
-            }
-            if (!found) return false;
-        }
-        return true;
-    }
-
     private static boolean isInventoryFull(Inventory inventory) {
         for (int i = 0; i < Math.min(inventory.getContainerSize(), 36); i++) {
             if (inventory.getItem(i).isEmpty()) return false;
@@ -500,34 +441,5 @@ public class QuickShulkerUtils {
 
     private record ReturnRequest(Item item, TrackedShulker shulker) {}
 
-    private static final class TrackedShulker {
-        private final Item boxItem;
-        private List<ItemStack> contents;
-        private int lastKnownSlot = -1;
 
-        private TrackedShulker(Item boxItem, List<ItemStack> contents) {
-            this.boxItem = boxItem;
-            this.contents = contents;
-        }
-
-        private Item boxItem() {
-            return boxItem;
-        }
-
-        private List<ItemStack> contents() {
-            return contents;
-        }
-
-        private int lastKnownSlot() {
-            return lastKnownSlot;
-        }
-
-        private void setLastKnownSlot(int slot) {
-            this.lastKnownSlot = slot;
-        }
-
-        private void updateContents(List<ItemStack> contents) {
-            this.contents = contents;
-        }
-    }
 }

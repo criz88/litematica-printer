@@ -10,37 +10,8 @@ plugins {
 version = fullProjectVersion
 group = modMavenGroup
 
-repositories {
-    mavenLocal()
-    maven("https://maven.fabricmc.net") { name = "FabricMC" }
-    maven("https://maven.fallenbreath.me/releases") { name = "FallenBreath" }
-    maven("https://api.modrinth.com/maven") { name = "Modrinth" }
-    maven("https://www.cursemaven.com") { name = "CurseMaven" }
-    maven("https://maven.terraformersmc.com/releases") { name = "TerraformersMC" }
-    maven("https://maven.nucleoid.xyz") { name = "Nucleoid" }
-    maven("https://masa.dy.fi/maven") { name = "Masa" }
-    maven("https://masa.dy.fi/maven/sakura-ryoko") { name = "SakuraRyoko" }
-    maven("https://maven.kyrptonaught.dev") { name = "Kyrptonaught" }
-    maven("https://jitpack.io") { name = "Jitpack" }
-    maven("https://maven.pkg.github.com/BiliXWhite/remote-inventory-next") {
-        name = "GitHub"
-        credentials {
-            username = System.getenv("GH_USERNAME") ?: ""
-            password = System.getenv("GH_TOKEN") ?: ""
-        }
-    }
-}
-
-// 锁定依赖版本防冲突
-configurations.all {
-    resolutionStrategy {
-        force("net.fabricmc:fabric-loader:$fabricLoaderVersion")
-        force("com.terraformersmc:modmenu:${prop("modmenu")}")
-        force("maven.modrinth:malilib:${prop("malilib_dependency")}")
-        force("maven.modrinth:litematica:${prop("litematica_dependency")}")
-        force("maven.modrinth:tweakeroo:${prop("tweakeroo_dependency")}")
-    }
-}
+configureFabricRepositories(remapped = false)
+configureFabricResolution()
 
 dependencies {
     minecraft("com.mojang:minecraft:$mcVersion")
@@ -90,18 +61,4 @@ tasks {
     }
 }
 
-publishing {
-    publications {
-        create<MavenPublication>("mavenJava") {
-            from(components["java"])
-            artifactId = modId
-            version = modVersion
-        }
-    }
-    repositories {
-        mavenLocal()
-        maven {
-            url = uri("$rootDir/publish")
-        }
-    }
-}
+configureFabricPublication()
