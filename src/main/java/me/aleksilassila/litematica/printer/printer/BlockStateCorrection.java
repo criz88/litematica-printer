@@ -47,9 +47,8 @@ final class BlockStateCorrection {
             case SNOW -> {
                 int layers = ctx.currentState.getValue(SnowLayerBlock.LAYERS);
                 if (layers < ctx.requiredState.getValue(SnowLayerBlock.LAYERS)) {
-                    Map<Direction, Vec3> sides = new HashMap<>() {{
-                        put(Direction.UP, new Vec3(0, (layers / 8d) - 1, 0));
-                    }};
+                    Map<Direction, Vec3> sides = new HashMap<>();
+                    sides.put(Direction.UP, new Vec3(0, (layers / 8d) - 1, 0));
                     return new ClickAction().setItem(Items.SNOW).setSides(sides);
                 }
                 if (printBreakWrongStateBlock) {
