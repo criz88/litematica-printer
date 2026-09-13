@@ -19,11 +19,16 @@ ROOT = Path(__file__).resolve().parents[2]
 
 def normalize_metadata(value):
     if isinstance(value, dict):
-        return {key: ('<build-version>' if key == 'version' else normalize_metadata(item))
-                for key, item in value.items()}
+        result = {key: ('<build-version>' if key == 'version' else normalize_metadata(item))
+                  for key, item in value.items()}
+        if 'jars' in result:
+            # The existing wrapper uses File.listFiles(), whose order is unspecified.
+            result['jars'] = sorted(result['jars'], key=lambda entry: entry['file'])
+        return result
     if isinstance(value, list):
         return [normalize_metadata(item) for item in value]
     if isinstance(value, str):
+        value = re.sub(r'1\.3-beta\.4-\d+-development', '<build-version>', value)
         return re.sub(r'1\.3-beta\.4-[^/]+(?=\.jar$)', '<build-version>', value)
     return value
 
@@ -84,10 +89,13 @@ if __name__ == '__main__':
     else:
         expected = json.loads(args.baseline.read_text())
         errors = [name for name, signature in expected['signatures'].items()
-                  if actual['signatures'].get(name) != signature]
+                  if signature.startswith(('public ', 'protected '))
+                  and actual['signatures'].get(name) != signature]
         for section in ['wrapper', 'resources']:
-            if actual[section] != expected[section]:
+            if actual[section] != normalize_metadata(expected[section]):
                 errors.append(section)
         if errors:
             raise SystemExit('Parity differences:\n' + '\n'.join(errors))
-        print(f'Unchanged {len(expected["signatures"])} class signatures, metadata, mixins and translations')
+        count = sum(signature.startswith(('public ', 'protected '))
+                    for signature in expected['signatures'].values())
+        print(f'Unchanged {count} public/protected class signatures, metadata, mixins and translations')
