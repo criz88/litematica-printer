@@ -13,7 +13,7 @@ import java.nio.file.StandardCopyOption
  * 特性：
  * 1. 支持任意 HTTP/HTTPS 链接
  * 2. 自定义输出目录（自动创建）
- * 3. 可选文件名（优先级：用户指定 > 服务器响应头 > 链接提取）
+ * 3. 可选文件名（优先级：用户指定 > 链接提取）
  * 4. 超时控制（连接10秒，读取30秒）
  * 5. 文件完整性校验（非空校验）
  * 6. 友好日志输出
@@ -46,8 +46,7 @@ object ExternalModDownloader {
         println()
 
         return try {
-            // 2. 处理文件名（优先级：用户指定 > 响应头 > 链接提取）
-            // val targetFileName = fileName ?: getFileNameFromResponse(connection) ?: extractFileNameFromUrl(trimmedUrl)
+            // 2. 处理文件名（优先级：用户指定 > 链接提取）
             val targetFileName = fileName ?: extractFileNameFromUrl(trimmedUrl)
             ?: throw IOException("无法识别文件名，请手动指定 fileName 参数")
             // 3. 构建目标文件
@@ -98,23 +97,6 @@ object ExternalModDownloader {
         connection.setRequestProperty("Accept", "*/*")
         connection.instanceFollowRedirects = true  // 自动跟随重定向
         return connection
-    }
-
-    /**
-     * 从服务器响应头提取文件名
-     * 支持 Content-Disposition 响应头（如：attachment; filename="xxx.jar"）
-     */
-    private fun getFileNameFromResponse(connection: HttpURLConnection): String? {
-        return try {
-            val disposition = connection.getHeaderField("Content-Disposition")
-            if (disposition.isNullOrBlank()) return null
-            // 匹配 filename="xxx" 或 filename=xxx 格式
-            val filenamePattern = Regex("filename[\"=]?([^\";]+)")
-            val matchResult = filenamePattern.find(disposition)
-            matchResult?.groupValues?.get(1)?.trim()?.takeIf { it.contains('.') }
-        } catch (e: Exception) {
-            null  // 提取失败时返回 null， fallback 到链接提取
-        }
     }
 
     /**
