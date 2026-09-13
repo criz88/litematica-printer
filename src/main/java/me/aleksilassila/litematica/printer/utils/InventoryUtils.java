@@ -23,9 +23,11 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.ClickType;
 import net.minecraft.world.inventory.Slot;
+import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.block.ShulkerBoxBlock;
 
 //#if MC >= 12105
 import net.minecraft.network.HashedStack;
@@ -81,7 +83,7 @@ public class InventoryUtils {
         Inventory inventory = playerEntity.getInventory();
         for (Item item : items) {
             for (int i = 0; i < inventory.getContainerSize(); i++) {
-                if (inventory.getItem(i).getItem() == item) {
+                if (inventory.getItem(i).getItem() == item && !isNonEmptyShulkerBox(inventory.getItem(i))) {
                     return true;
                 }
             }
@@ -127,9 +129,10 @@ public class InventoryUtils {
     }
 
     public static boolean setPickedItemToHand(int sourceSlot, ItemStack stack, Minecraft mc) {
-        if (mc.player == null) return false;
+        if (mc.player == null || isNonEmptyShulkerBox(stack)) return false;
         Player player = mc.player;
         Inventory inventory = player.getInventory();
+        if (sourceSlot >= 0 && isNonEmptyShulkerBox(inventory.getItem(sourceSlot))) return false;
         // 目标物品在热键栏中
         if (Inventory.isHotbarSlot(sourceSlot)) {
             setHotbarSlot(sourceSlot, inventory);
@@ -163,19 +166,19 @@ public class InventoryUtils {
 
     public static boolean swapItemToMainHand(ItemStack stackReference, Minecraft mc) {
         Player player = mc.player;
-        if (player == null) return false;
+        if (player == null || isNonEmptyShulkerBox(stackReference)) return false;
 
         //#if MC > 12004
         boolean b = fi.dy.masa.malilib.util.InventoryUtils.areStacksEqualIgnoreNbt(stackReference, player.getMainHandItem());
         //#else
         //$$ boolean b = fi.dy.masa.malilib.util.InventoryUtils.areStacksEqual(stackReference, player.getMainHandItem());
         //#endif
-        if (b) {
+        if (b && !isNonEmptyShulkerBox(player.getMainHandItem())) {
             return false;
         }
 
         int slot = fi.dy.masa.malilib.util.InventoryUtils.findSlotWithItem(player.inventoryMenu, stackReference, true);
-        if (slot != -1) {
+        if (slot != -1 && !isNonEmptyShulkerBox(player.inventoryMenu.slots.get(slot).getItem())) {
             ClientPacketListener connection = client.getConnection();
             if (connection == null) {
                 return false;
@@ -403,11 +406,18 @@ public class InventoryUtils {
 
     private static int findItemInInventory(Inventory inventory, Item item) {
         for (int i = 0; i < inventory.getContainerSize(); i++) {
-            if (inventory.getItem(i).getItem().equals(item)) {
+            if (inventory.getItem(i).getItem().equals(item) && !isNonEmptyShulkerBox(inventory.getItem(i))) {
                 return i;
             }
         }
         return -1;
+    }
+
+    /** Filled shulker boxes are storage, never building materials, regardless of their name or color. */
+    public static boolean isNonEmptyShulkerBox(ItemStack stack) {
+        return stack.getItem() instanceof BlockItem blockItem
+                && blockItem.getBlock() instanceof ShulkerBoxBlock
+                && !ShulkerContents.getShulkerContents(stack).isEmpty();
     }
 
     public PickResult checkCanSwitchToItems(LocalPlayer player, Item[] items) {
@@ -426,7 +436,7 @@ public class InventoryUtils {
         for (Item item : targetItems) {
             for (int i = 0; i < inv.getContainerSize(); i++) {
                 ItemStack itemStack = inv.getItem(i);
-                if (itemStack.getItem().equals(item)) {
+                if (itemStack.getItem().equals(item) && !isNonEmptyShulkerBox(itemStack)) {
                     return InventoryUtils.checkPickSlotAvailable(i, client);
                 }
             }
