@@ -43,11 +43,9 @@ public class RemoteContainerUtils {
 
     // 每种物品的取物进度：先查缓存，缓存 miss 后渐进扫描容器
     private static class ItemFetchState {
-        final String itemId;
         int scanIndex;
         boolean triedCache;
         boolean requestPending;
-        ItemFetchState(String itemId) { this.itemId = itemId; }
         void reset() { triedCache = false; scanIndex = 0; requestPending = false; }
     }
 
@@ -153,7 +151,7 @@ public class RemoteContainerUtils {
         if (knownContainers.isEmpty()) { scanContainerPos(); if (knownContainers.isEmpty()) return false; }
 
         String itemId = getItemId(item);
-        ItemFetchState state = fetchStates.computeIfAbsent(itemId, ItemFetchState::new);
+        ItemFetchState state = fetchStates.computeIfAbsent(itemId, ignored -> new ItemFetchState());
         if (state.requestPending || pendingExchange != null) return true;
 
         if (!state.triedCache) {
