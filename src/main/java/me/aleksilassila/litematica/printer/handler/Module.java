@@ -6,8 +6,6 @@ import lombok.Getter;
 import me.aleksilassila.litematica.printer.config.Configs;
 import me.aleksilassila.litematica.printer.enums.*;
 import me.aleksilassila.litematica.printer.printer.*;
-import me.aleksilassila.litematica.printer.Reference;
-import me.aleksilassila.litematica.printer.utils.BreakUtils;
 import me.aleksilassila.litematica.printer.utils.ConfigUtils;
 import me.aleksilassila.litematica.printer.utils.LitematicaUtils;
 import me.aleksilassila.litematica.printer.utils.PlayerUtils;
@@ -101,14 +99,7 @@ public abstract class Module extends ConfigUtils {
     }
 
     public void tick() {
-        int tickInterval = getTickInterval();
-        if (tickInterval > 0) {
-            long currentTickTime = ModuleManager.getCurrentHandlerTime();
-            if (lastTickTime != -1L && currentTickTime - lastTickTime < tickInterval) {
-                return;
-            }
-            lastTickTime = currentTickTime;
-        }
+        if (!isTickDue()) return;
 
         if (!isConfigAllowed()) {
             pendingHighlights.clear();
@@ -121,13 +112,7 @@ public abstract class Module extends ConfigUtils {
         }
 
         if (box == null) return;
-        if (iteratorManager.tryBuildBox(player, selectionType != null ? selectionType.getOptionListValue() : null)) {
-            box.set(iteratorManager.getBox());
-            scanState = ScanState.RUNNING;
-            waitingPos = null;
-            currentCycleItem = null;
-            iteratorManager.reset();
-        }
+        updateScanBox();
 
         preprocess();
 
@@ -135,14 +120,39 @@ public abstract class Module extends ConfigUtils {
         int remainingExecs = Math.max(getMaxExecutions(), 0);
         if (!canExecute() || !canIterate()) return;
 
-        // 高亮渐隐
-        long cutoff = System.currentTimeMillis() - Configs.Highlight.HIGHLIGHT_FADE_DURATION.getIntegerValue() * 100L;
-        pendingHighlights.removeIf(ph -> ph.time() < cutoff);
+        expireHighlights();
 
         // 远离工作区时提前退出，避免空跑卡顿
         if (needsAreaCheck() && !isPlayerRangeInWorkArea()) return;
 
         iterateBlocks(remainingExecs);
+    }
+
+    private boolean isTickDue() {
+        int tickInterval = getTickInterval();
+        if (tickInterval > 0) {
+            long currentTickTime = ModuleManager.getCurrentHandlerTime();
+            if (lastTickTime != -1L && currentTickTime - lastTickTime < tickInterval) {
+                return false;
+            }
+            lastTickTime = currentTickTime;
+        }
+
+        return true;
+    }
+
+    private void updateScanBox() {
+        if (iteratorManager.tryBuildBox(player, selectionType != null ? selectionType.getOptionListValue() : null)) {
+            box.set(iteratorManager.getBox());
+            resetScanProgress();
+        }
+    }
+
+    private void expireHighlights() {
+        // 高亮渐隐
+        long cutoff = System.currentTimeMillis() - Configs.Highlight.HIGHLIGHT_FADE_DURATION.getIntegerValue() * 100L;
+        pendingHighlights.removeIf(ph -> ph.time() < cutoff);
+
     }
 
     private void iterateBlocks(int maxExecs) {
@@ -162,20 +172,16 @@ public abstract class Module extends ConfigUtils {
 
         try {
             if (scanState == ScanState.WAITING) {
-                BlockPos pos = waitingPos;
-                waitingPos = null;
-                scanState = ScanState.RUNNING;
-                if (pos != null && iteratorManager.isWithinRange(pos) && needsWork(pos)) {
-                    executeIteration(pos, skipIteration);
+                if (retryWaitingPosition()) {
                     execCount++;
                     if (maxExecs > 0 && execCount >= maxExecs) return;
                 }
-                if (skipIteration.get() || ActionManager.INSTANCE.needWaitModifyLook) return;
+                if (shouldPauseScan()) return;
             }
 
             while (true) {
                 if (timeLimitExceeded.get()) return;
-                if (skipIteration.get() || ActionManager.INSTANCE.needWaitModifyLook) return;
+                if (shouldPauseScan()) return;
 
                 BlockPos pos = iteratorManager.nextCandidate();
                 if (pos == null) {
@@ -188,24 +194,38 @@ public abstract class Module extends ConfigUtils {
                 if (needsAreaCheck() && !isPosInWorkspace(pos)) continue;
 
                 boolean executed = false;
-                if (needsWork(pos)) {
-                    // 按方块分类：一轮扫描仅处理一种方块类型（可选开关）
-                    if (!Configs.Core.CLASSIFY_BY_BLOCK.getBooleanValue() || isCycleItemMatch(pos)) {
-                        executeIteration(pos, skipIteration);
-                        executed = true;
-                        if (maxExecs > 0 && ++execCount >= maxExecs) return;
-                    }
+                // Preserve short-circuit order: work eligibility before item classification.
+                if (needsWork(pos) && (!Configs.Core.CLASSIFY_BY_BLOCK.getBooleanValue() || isCycleItemMatch(pos))) {
+                    executeIteration(pos, skipIteration);
+                    executed = true;
+                    if (maxExecs > 0 && ++execCount >= maxExecs) return;
                 }
-
-                currentGuiInfo = new GuiBlockInfo(pos,
-                        level.getBlockState(pos), LitematicaUtils.getBlockState(pos),
-                        PlayerUtils.canInteracted(pos), executed,
-                        isPosInWorkspace(pos) && PlayerUtils.canInteracted(pos));
+                updateGuiInfo(pos, executed);
             }
         } finally {
             if (timeoutTask != null) timeoutTask.cancel(false);
             timeLimitExceeded.set(false);
         }
+    }
+
+    private boolean retryWaitingPosition() {
+        BlockPos pos = waitingPos;
+        waitingPos = null;
+        scanState = ScanState.RUNNING;
+        if (pos == null || !iteratorManager.isWithinRange(pos) || !needsWork(pos)) return false;
+        executeIteration(pos, skipIteration);
+        return true;
+    }
+
+    private boolean shouldPauseScan() {
+        return skipIteration.get() || ActionManager.INSTANCE.needWaitModifyLook;
+    }
+
+    private void updateGuiInfo(BlockPos pos, boolean executed) {
+        currentGuiInfo = new GuiBlockInfo(pos,
+                level.getBlockState(pos), LitematicaUtils.getBlockState(pos),
+                PlayerUtils.canInteracted(pos), executed,
+                isPosInWorkspace(pos) && PlayerUtils.canInteracted(pos));
     }
 
     private boolean isCycleItemMatch(BlockPos pos) {
@@ -257,6 +277,10 @@ public abstract class Module extends ConfigUtils {
     }
 
     public void resetScanState() {
+        resetScanProgress();
+    }
+
+    private void resetScanProgress() {
         scanState = ScanState.RUNNING;
         waitingPos = null;
         currentCycleItem = null;
