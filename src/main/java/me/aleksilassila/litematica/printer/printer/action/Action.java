@@ -171,12 +171,14 @@ public class Action {
         if (Configs.Print.PLACE_IN_AIR.getBooleanValue() && !this.requiresSupport) {
             ActionManager.INSTANCE.queueClick(
                     blockPos,
+                    blockPos,
                     side.getOpposite(),
                     getSides().get(side),
                     useShift
             );
         } else {
             ActionManager.INSTANCE.queueClick(
+                    blockPos,
                     blockPos.relative(side),
                     side.getOpposite(),
                     getSides().get(side),

@@ -6,6 +6,7 @@ import me.aleksilassila.litematica.printer.config.Configs;
 import me.aleksilassila.litematica.printer.mixin.extension.MultiPlayerGameModeExtension;
 import me.aleksilassila.litematica.printer.utils.BlockUtils;
 import me.aleksilassila.litematica.printer.utils.PacketUtils;
+import me.aleksilassila.litematica.printer.utils.PlayerUtils;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -26,6 +27,7 @@ import net.minecraft.world.entity.player.Input;
 public class ActionManager {
     public static final ActionManager INSTANCE = new ActionManager();
 
+    private BlockPos workPos;
     public BlockPos target;
     public Direction side;
     public Vec3 hitModifier;
@@ -40,21 +42,24 @@ public class ActionManager {
     private ActionManager() {
     }
 
-    public void queueClick(@NotNull BlockPos target, @NotNull Direction side, @NotNull Vec3 hitModifier, boolean useShift) {
+    public void queueClick(@NotNull BlockPos workPos, @NotNull BlockPos target, @NotNull Direction side, @NotNull Vec3 hitModifier, boolean useShift) {
         if (Configs.Placement.PLACE_INTERVAL.getIntegerValue() != 0) {
             if (this.target != null) {
                 System.out.println("Was not ready yet.");
                 return;
             }
         }
-        this.target = target;
+        this.workPos = workPos.immutable();
+        this.target = target.immutable();
         this.side = side;
         this.hitModifier = hitModifier;
         this.useShift = useShift;
     }
 
     public ActionManager sendQueue(LocalPlayer player) {
-        if (target == null || side == null || hitModifier == null) {
+        // 排队等待转向后，工作位置和实际点击的支撑方块都必须仍在范围内。
+        if (player == null || target == null || side == null || hitModifier == null
+                || !PlayerUtils.canInteracted(workPos) || !PlayerUtils.canInteracted(target)) {
             clearQueue();
             return this;
         }
@@ -128,6 +133,7 @@ public class ActionManager {
     }
 
     public void clearQueue() {
+        this.workPos = null;
         this.target = null;
         this.side = null;
         this.hitModifier = null;
