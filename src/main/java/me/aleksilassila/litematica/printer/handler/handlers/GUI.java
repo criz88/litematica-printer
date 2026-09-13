@@ -13,7 +13,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.block.LiquidBlock;
 
 import java.util.Arrays;
-import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * GUI 统计处理器 — 增量遍历 box 计算进度，每 tick 分摊扫描量避免卡顿。
