@@ -82,11 +82,7 @@ public class InventoryUtils {
         if (!playerEntity.containerMenu.equals(playerEntity.inventoryMenu)) return false;
         Inventory inventory = playerEntity.getInventory();
         for (Item item : items) {
-            for (int i = 0; i < inventory.getContainerSize(); i++) {
-                if (inventory.getItem(i).getItem() == item && !isNonEmptyShulkerBox(inventory.getItem(i))) {
-                    return true;
-                }
-            }
+            if (findItemInInventory(inventory, item) != -1) return true;
         }
         return false;
     }
@@ -434,12 +430,8 @@ public class InventoryUtils {
             return InventoryUtils.checkPickSlotAvailable(-1, client);
         }
         for (Item item : targetItems) {
-            for (int i = 0; i < inv.getContainerSize(); i++) {
-                ItemStack itemStack = inv.getItem(i);
-                if (itemStack.getItem().equals(item) && !isNonEmptyShulkerBox(itemStack)) {
-                    return InventoryUtils.checkPickSlotAvailable(i, client);
-                }
-            }
+            int slot = findItemInInventory(inv, item);
+            if (slot != -1) return InventoryUtils.checkPickSlotAvailable(slot, client);
         }
         return PickResult.FAIL;
     }
