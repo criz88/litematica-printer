@@ -51,18 +51,7 @@ public class Configs extends ConfigBuilders implements IConfigHandler {
     public static final ImmutableList<IHotkey> HOTKEYS;
 
     static {
-        LinkedHashSet<IConfigBase> optionSet = new LinkedHashSet<>();
-        optionSet.addAll(Core.OPTIONS);
-        optionSet.addAll(Placement.OPTIONS);
-        optionSet.addAll(Break.OPTIONS);
-        optionSet.addAll(Hotkeys.OPTIONS);
-        optionSet.addAll(Print.OPTIONS);
-        optionSet.addAll(Mine.OPTIONS);
-        optionSet.addAll(Fill.OPTIONS);
-        optionSet.addAll(Fluid.OPTIONS);
-        optionSet.addAll(Trench.OPTIONS);
-        optionSet.addAll(Bedrock.OPTIONS);
-        optionSet.addAll(Highlight.OPTIONS);
+        LinkedHashSet<IConfigBase> optionSet = new LinkedHashSet<>(collectOptions());
         OPTIONS = ImmutableList.copyOf(optionSet);
 
         List<IHotkey> hotkeys = new ArrayList<>();
@@ -74,19 +63,24 @@ public class Configs extends ConfigBuilders implements IConfigHandler {
         HOTKEYS = ImmutableList.copyOf(hotkeys);
     }
 
-    public static ImmutableList<IConfigBase> All = ImmutableList.<IConfigBase>builder()
-            .addAll(Core.OPTIONS)
-            .addAll(Placement.OPTIONS)
-            .addAll(Break.OPTIONS)
-            .addAll(Hotkeys.OPTIONS)
-            .addAll(Print.OPTIONS)
-            .addAll(Mine.OPTIONS)
-            .addAll(Fill.OPTIONS)
-            .addAll(Fluid.OPTIONS)
-            .addAll(Trench.OPTIONS)
-            .addAll(Bedrock.OPTIONS)
-            .addAll(Highlight.OPTIONS)
-            .build();
+    public static ImmutableList<IConfigBase> All = collectOptions();
+
+    /** Keep category order shared while preserving OPTIONS deduplication and All duplicates. */
+    private static ImmutableList<IConfigBase> collectOptions() {
+        return ImmutableList.<IConfigBase>builder()
+                .addAll(Core.OPTIONS)
+                .addAll(Placement.OPTIONS)
+                .addAll(Break.OPTIONS)
+                .addAll(Hotkeys.OPTIONS)
+                .addAll(Print.OPTIONS)
+                .addAll(Mine.OPTIONS)
+                .addAll(Fill.OPTIONS)
+                .addAll(Fluid.OPTIONS)
+                .addAll(Trench.OPTIONS)
+                .addAll(Bedrock.OPTIONS)
+                .addAll(Highlight.OPTIONS)
+                .build();
+    }
 
     public static class Core {
         // 全局开关
