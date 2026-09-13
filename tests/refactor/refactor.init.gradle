@@ -1,0 +1,31 @@
+// Explicitly enabled validation only; no test dependencies enter release builds.
+gradle.beforeProject { p ->
+    if (p.path != ':1.21.4') return
+    p.afterEvaluate {
+        p.dependencies.add('testImplementation', 'org.junit.jupiter:junit-jupiter:5.11.4')
+        p.dependencies.add('testImplementation', 'org.mockito:mockito-core:5.14.2')
+        p.dependencies.add('testRuntimeOnly', 'org.junit.platform:junit-platform-launcher:1.11.4')
+        def compileChecks = p.tasks.register('compileRefactorChecks', JavaCompile) {
+            dependsOn(p.tasks.named('classes'))
+            source(new File(p.rootDir, 'tests/refactor/java'))
+            classpath = p.sourceSets.test.compileClasspath
+            destinationDirectory.set(p.layout.buildDirectory.dir('refactor/classes'))
+            javaCompiler.set(p.javaToolchains.compilerFor {
+                languageVersion.set(JavaLanguageVersion.of(21))
+            })
+        }
+        p.tasks.register('refactorTest', Test) {
+            dependsOn(compileChecks)
+            testClassesDirs = p.files(compileChecks.flatMap { it.destinationDirectory })
+            classpath = p.sourceSets.test.runtimeClasspath + testClassesDirs
+            useJUnitPlatform()
+            javaLauncher.set(p.javaToolchains.launcherFor {
+                languageVersion.set(JavaLanguageVersion.of(21))
+            })
+            jvmArgs('-XX:+EnableDynamicAgentLoading')
+            systemProperty('refactor.fixtures', new File(p.rootDir, 'tests/refactor/fixtures').absolutePath)
+            systemProperty('refactor.record', p.findProperty('refactorRecordBaseline') ?: 'false')
+            testLogging { events 'passed', 'failed'; exceptionFormat 'full' }
+        }
+    }
+}
