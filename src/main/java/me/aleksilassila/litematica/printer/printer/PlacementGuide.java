@@ -37,7 +37,8 @@ public class PlacementGuide {
     public @Nullable Action getAction(SchematicBlockContext ctx) {
         BlockMatchingType state = BlockMatchingType.get(ctx);
         if (state == BlockMatchingType.CORRECT) return null;
-        if (Configs.Print.SKIP_WATERLOGGED_BLOCK.getBooleanValue() && BlockUtils.needsWater(ctx.requiredState)) {
+        if (Configs.Print.SKIP_WATERLOGGED_BLOCK.getBooleanValue()
+                && (BlockUtils.needsWater(ctx.requiredState) || BlockUtils.isLiveCoral(ctx.requiredState))) {
             return null;
         }
         // 先准备水，再检查水生植物能否存活；水源不受用户的可替换方块列表限制。
@@ -64,6 +65,12 @@ public class PlacementGuide {
                 }
                 case NORMAL -> { }
             }
+        }
+        // Check after water preparation; missing water must not block clearing incorrect blocks.
+        if (state == BlockMatchingType.MISSING_BLOCK
+                && !BlockUtils.hasWaterForCoralPlacement(ctx.level, ctx.blockPos, ctx.requiredState)) {
+            MessageUtils.setOverlayMessage(I18n.CORAL_NEEDS_WATER.getName());
+            return null;
         }
         // canSurvive 只阻拦放置（MISSING），不阻拦破坏（ERROR_BLOCK 走 BREAK_WRONG_BLOCK）
         if (state == BlockMatchingType.MISSING_BLOCK && !ctx.requiredState.canSurvive(ctx.level, ctx.blockPos)) return null;

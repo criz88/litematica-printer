@@ -27,6 +27,7 @@ public class I18n {
     public static final I18n BREWINGSTAND_LOWER = of("brewingstand.lower");
     public static final I18n BREWINGSTAND_RAISE = of("brewingstand.raise");
 
+    public static final I18n CORAL_NEEDS_WATER = of("coral.needs_water");
     public static final I18n BLOCK_NO_SUPPORT = of("block.no_support");
     public static final I18n BLOCK_MISMATCH = of("block.mismatch");
 

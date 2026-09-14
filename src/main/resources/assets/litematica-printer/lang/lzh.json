@@ -1,4 +1,5 @@
 {
+  "litematica-printer.coral.needs_water": "活珊無水可養，候而後置",
   "litematica-printer.auto_disable_notice": "印機自閉",
   "litematica-printer.bedrock.creative_mode": "創世之際，不可破基岩！",
   "litematica-printer.bedrock.mod_missing": "未載 Fabric-Bedrock-Miner/Block-Miner 之模，不能破基岩！",
@@ -211,7 +212,7 @@
   "litematica-printer.config.printSkipList": "跳置 - 列表",
   "litematica-printer.config.printSkipList.desc": "印時跳之方列表。可入 ID 或譯名，例：§bminecraft:stone§r §b砂岩§r。\n加 §b#§r 則標籤配，例：§l#minecraft:logs§r。\n文後加“,c”表含配，例：§l帶釉陶瓦,c§r。",
   "litematica-printer.config.printSkipWaterlogged": "跳含水塊",
-  "litematica-printer.config.printSkipWaterlogged.desc": "印時跳含水方塊。",
+  "litematica-printer.config.printSkipWaterlogged.desc": "印時跳含水塊與諸活珊，珊瑚塊亦然。",
   "litematica-printer.config.printerAutoDisable": "自關印機",
   "litematica-printer.config.printerAutoDisable.desc": "玩家死時自關印機，免重生誤動。",
   "litematica-printer.config.printerIteratorMode": "遍序",

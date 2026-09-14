@@ -266,6 +266,8 @@ public class Print extends Module {
             skipIteration.set(true);
             return;
         }
+        if (BlockUtils.isLiveCoral(ctx.requiredState))
+            ActionManager.INSTANCE.setCoralStateToPlace(ctx.requiredState);
         Vec3 hitModifier = LitematicaUtils.usePrecisionPlacement(blockPos, ctx.requiredState);
         if (hitModifier != null) {
             ActionManager.INSTANCE.hitModifier = hitModifier;

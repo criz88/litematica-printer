@@ -1,4 +1,5 @@
 {
+  "litematica-printer.coral.needs_water": "Живому кораллу нужна вода на его месте или в соседнем блоке; ожидание размещения",
   "litematica-printer.auto_disable_notice": "Принтер автоматически отключён",
   "litematica-printer.bedrock.creative_mode": "Режим бедрока недоступен в творческом режиме!",
   "litematica-printer.bedrock.mod_missing": "Мод Fabric-Bedrock-Miner/Block-Miner не установлен — разрушение бедрока недоступно!",
@@ -211,7 +212,7 @@
   "litematica-printer.config.printSkipList": "Пропуск размещения — список",
   "litematica-printer.config.printSkipList.desc": "Список блоков, пропускаемых при печати. Можно вводить ID предмета или переведённое название, пример: §bminecraft:stone§r §bsandstone§r.\nПрефикс §b#§r для тега, пример: §l#minecraft:logs§r.\nДобавьте «,c» для поиска по вхождению, пример: §lglazed_terracotta,c§r.",
   "litematica-printer.config.printSkipWaterlogged": "Пропускать блоки с водой",
-  "litematica-printer.config.printSkipWaterlogged.desc": "Пропускать блоки, залитые водой, при печати.",
+  "litematica-printer.config.printSkipWaterlogged.desc": "При печати пропускать блоки с водой и все живые кораллы, включая коралловые блоки.",
   "litematica-printer.config.printerAutoDisable": "Автоотключение принтера",
   "litematica-printer.config.printerAutoDisable.desc": "Автоматически отключать принтер при гибели игрока во избежание ошибочных действий после возрождения.",
   "litematica-printer.config.printerIteratorMode": "Порядок обхода",

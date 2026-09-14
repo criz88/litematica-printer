@@ -1,4 +1,5 @@
 {
+  "litematica-printer.coral.needs_water": "Live coral needs water at its position or in an adjacent block; waiting to place",
   "litematica-printer.config.trenchSelectionType": "Selection Type",
   "litematica-printer.config.trenchSelectionType.desc": "Work area within the selection:\n§dFull Projection§r: Process the full area selection (default)\n§dVisible Area§r: Process only the current Litematica render layer\n§dBelow Player§r: Process up to the player's block height\n§dAbove Player§r: Process from the player's height rounded up\nThe center and end walls always follow the original subregion bounds.",
   "litematica-printer.config.trenchIncludeFlowing": "Include Flowing Liquids",
@@ -240,7 +241,7 @@
   "litematica-printer.config.printSkipList": "Skip Placement - List",
   "litematica-printer.config.printSkipList.desc": "Block list skipped during printing. Can input item ID or translated name in current language, example: §bminecraft:stone§r §bsandstone§r.\nPrefix §b#§r for tag matching, example: §l#minecraft:logs§r.\nAdd \",c\" after text for contains matching, example: §lglazed_terracotta,c§r.",
   "litematica-printer.config.printSkipWaterlogged": "Skip Waterlogged Blocks",
-  "litematica-printer.config.printSkipWaterlogged.desc": "Skip waterlogged blocks during printing.",
+  "litematica-printer.config.printSkipWaterlogged.desc": "Skip waterlogged blocks and all live coral during printing.",
   "litematica-printer.config.printerAutoDisable": "Auto Disable Printer",
   "litematica-printer.config.printerAutoDisable.desc": "Automatically disable printer when player dies to avoid misoperations after respawning.",
   "litematica-printer.config.printerIteratorMode": "Iteration Order",

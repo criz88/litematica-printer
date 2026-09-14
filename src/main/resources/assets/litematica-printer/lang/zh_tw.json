@@ -1,4 +1,5 @@
 {
+  "litematica-printer.coral.needs_water": "活珊瑚所在位置或相鄰方塊尚無可維持活性的水，等待放置",
   "litematica-printer.auto_disable_notice": "印表機已自動關閉",
   "litematica-printer.bedrock.creative_mode": "創造模式無法使用破基岩模式！",
   "litematica-printer.bedrock.mod_missing": "未安裝 Fabric-Bedrock-Miner/Block-Miner 模組，無法破基岩！",
@@ -182,7 +183,7 @@
   "litematica-printer.config.printSkipList": "跳過放置 - 清單",
   "litematica-printer.config.printSkipList.desc": "列印時跳過的方塊清單。可輸入物品ID或當前語言的翻譯名稱，範例：§bminecraft:stone§r §b砂岩§r。\n前綴添加§b#§r表示標籤匹配，範例：§l#minecraft:logs§r。\n文字後加「,c」表示包含匹配，範例：§l帶釉陶瓦,c§r。",
   "litematica-printer.config.printSkipWaterlogged": "跳過含水方塊",
-  "litematica-printer.config.printSkipWaterlogged.desc": "列印時跳過含水方塊。",
+  "litematica-printer.config.printSkipWaterlogged.desc": "列印時跳過含水方塊和所有活珊瑚（包括珊瑚塊）。",
   "litematica-printer.config.printerAutoDisable": "自動關閉印表機",
   "litematica-printer.config.printerAutoDisable.desc": "當玩家死亡時自動關閉印表機，避免重生後印表機誤操作。",
   "litematica-printer.config.printerIteratorMode": "遍歷順序",

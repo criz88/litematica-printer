@@ -10,6 +10,7 @@ import net.minecraft.core.Vec3i;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.tags.FluidTags;
+import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.*;
 import net.minecraft.world.level.block.state.BlockState;
@@ -151,6 +152,23 @@ public class BlockUtils {
                 || blockState.getBlock() instanceof BubbleColumnBlock
                 || blockState.getBlock() instanceof SeagrassBlock
                 || (blockState.getFluidState().is(FluidTags.WATER) && blockState.getFluidState().isSource());
+    }
+
+    public static boolean isLiveCoral(BlockState state) {
+        Block block = state.getBlock();
+        return block instanceof CoralBlock || block instanceof CoralPlantBlock
+                || block instanceof CoralFanBlock || block instanceof CoralWallFanBlock;
+    }
+
+    /** Check actual water before placement; schematic WATERLOGGED alone is not water. */
+    public static boolean hasWaterForCoralPlacement(BlockGetter level, BlockPos pos, BlockState required) {
+        if (!isLiveCoral(required)) return true;
+        // Only a waterlogged plant/fan retains full water at its own position.
+        var fluid = level.getFluidState(pos);
+        if (isWaterlogged(required) && fluid.is(FluidTags.WATER) && fluid.getAmount() == 8) return true;
+        for (Direction direction : Direction.values())
+            if (level.getFluidState(pos.relative(direction)).is(FluidTags.WATER)) return true;
+        return false;
     }
 
     public static boolean isWaterSource(BlockState blockState) {
