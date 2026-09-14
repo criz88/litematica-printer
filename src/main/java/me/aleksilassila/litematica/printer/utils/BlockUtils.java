@@ -9,6 +9,7 @@ import net.minecraft.core.Direction;
 import net.minecraft.core.Vec3i;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
+import net.minecraft.tags.FluidTags;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.*;
 import net.minecraft.world.level.block.state.BlockState;
@@ -148,7 +149,8 @@ public class BlockUtils {
         return isWaterSource(blockState)
                 || isWaterlogged(blockState)
                 || blockState.getBlock() instanceof BubbleColumnBlock
-                || blockState.getBlock() instanceof SeagrassBlock;
+                || blockState.getBlock() instanceof SeagrassBlock
+                || (blockState.getFluidState().is(FluidTags.WATER) && blockState.getFluidState().isSource());
     }
 
     public static boolean isWaterSource(BlockState blockState) {
