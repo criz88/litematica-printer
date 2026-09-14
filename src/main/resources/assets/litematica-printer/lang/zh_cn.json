@@ -1,4 +1,8 @@
 {
+  "litematica-printer.config.printFillCauldrons": "炼药锅自动灌注",
+  "litematica-printer.config.printFillCauldrons.desc": "使用水桶或岩浆桶将空炼药锅灌满，并在潜影盒补货时归还产生的空桶。默认关闭；不调整低水位或转换已有内容。",
+  "litematica-printer.cauldron.sync_timeout": "炼药锅灌注结果未确认，已停止打印，请检查炼药锅和桶。",
+  "litematica-printer.cauldron.return_unavailable": "无法找到空桶的来源潜影盒，空桶保留在背包中。",
   "litematica-printer.config.trenchSelectionType": "选区类型",
   "litematica-printer.config.trenchSelectionType.desc": "选区内的工作范围：\n§d全部投影§r：处理整个区域选区（默认）\n§d可见层§r：仅处理 Litematica 当前可见层\n§d玩家下方§r：处理到玩家所在方块的高度\n§d玩家上方§r：从玩家高度向上取整的位置开始处理\n中线和前后边缘始终按原始子区域确定。",
   "litematica-printer.config.trenchIncludeFlowing": "包含流动液体",

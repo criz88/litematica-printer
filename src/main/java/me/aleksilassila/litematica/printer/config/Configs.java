@@ -373,6 +373,10 @@ public class Configs extends ConfigBuilders implements IConfigHandler {
                 .defaultValue(true)
                 .build();
 
+        public static final ConfigBoolean FILL_CAULDRONS = booleanValue("printFillCauldrons")
+                .defaultValue(false)
+                .build();
+
         // 堆肥桶自动填充
         public static final ConfigBoolean FILL_COMPOSTER = booleanValue("printAutoFillComposter")
                 .defaultValue(false)
@@ -468,6 +472,7 @@ public class Configs extends ConfigBuilders implements IConfigHandler {
                 STRIP_LOGS,
                 NOTE_BLOCK_TUNING,
                 REPLACE_CORAL,
+                FILL_CAULDRONS,
                 FILL_COMPOSTER,
                 FILL_COMPOSTER_WHITELIST,
                 BONEMEAL_CROPS,

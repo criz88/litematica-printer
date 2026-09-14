@@ -1,4 +1,8 @@
 {
+  "litematica-printer.config.printFillCauldrons": "Fill cauldrons",
+  "litematica-printer.config.printFillCauldrons.desc": "Fill empty cauldrons with water or lava buckets and return the resulting empty buckets when restocking from shulkers. Off by default; does not adjust partial levels or replace existing contents.",
+  "litematica-printer.cauldron.sync_timeout": "Cauldron fill was not confirmed. Printer stopped; check the cauldron and bucket.",
+  "litematica-printer.cauldron.return_unavailable": "Cannot identify the source shulker box. Empty bucket kept in inventory.",
   "litematica-printer.config.trenchSelectionType": "Selection Type",
   "litematica-printer.config.trenchSelectionType.desc": "Work area within the selection:\n§dFull Projection§r: Process the full area selection (default)\n§dVisible Area§r: Process only the current Litematica render layer\n§dBelow Player§r: Process up to the player's block height\n§dAbove Player§r: Process from the player's height rounded up\nThe center and end walls always follow the original subregion bounds.",
   "litematica-printer.config.trenchIncludeFlowing": "Include Flowing Liquids",

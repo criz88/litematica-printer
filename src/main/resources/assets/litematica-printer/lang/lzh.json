@@ -1,4 +1,8 @@
 {
+  "litematica-printer.config.printFillCauldrons": "自灌煉藥鍋",
+  "litematica-printer.config.printFillCauldrons.desc": "以水桶或熔岩桶灌滿空鍋，補貨時還空桶於界伏盒。預設閉；不調水位，不易鍋中物。",
+  "litematica-printer.cauldron.sync_timeout": "煉藥鍋灌注未驗，印機已停，請察鍋桶。",
+  "litematica-printer.cauldron.return_unavailable": "未尋得空桶所出之界伏盒，桶留囊中。",
   "litematica-printer.auto_disable_notice": "印機自閉",
   "litematica-printer.bedrock.creative_mode": "創世之際，不可破基岩！",
   "litematica-printer.bedrock.mod_missing": "未載 Fabric-Bedrock-Miner/Block-Miner 之模，不能破基岩！",

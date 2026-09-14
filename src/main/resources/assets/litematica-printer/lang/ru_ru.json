@@ -1,4 +1,8 @@
 {
+  "litematica-printer.config.printFillCauldrons": "Заполнение котлов",
+  "litematica-printer.config.printFillCauldrons.desc": "Заполнять пустые котлы вёдрами воды или лавы и возвращать пустые вёдра при пополнении из шалкеров. По умолчанию выключено; уровень и содержимое заполненных котлов не изменяются.",
+  "litematica-printer.cauldron.sync_timeout": "Заполнение котла не подтверждено. Принтер остановлен; проверьте котёл и ведро.",
+  "litematica-printer.cauldron.return_unavailable": "Не удалось определить исходный шалкеровый ящик. Пустое ведро оставлено в инвентаре.",
   "litematica-printer.auto_disable_notice": "Принтер автоматически отключён",
   "litematica-printer.bedrock.creative_mode": "Режим бедрока недоступен в творческом режиме!",
   "litematica-printer.bedrock.mod_missing": "Мод Fabric-Bedrock-Miner/Block-Miner не установлен — разрушение бедрока недоступно!",

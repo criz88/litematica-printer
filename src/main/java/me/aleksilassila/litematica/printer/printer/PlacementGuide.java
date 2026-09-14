@@ -1,5 +1,6 @@
 package me.aleksilassila.litematica.printer.printer;
 
+import me.aleksilassila.litematica.printer.printer.action.CauldronFillAction;
 import me.aleksilassila.litematica.printer.I18n;
 import me.aleksilassila.litematica.printer.Reference;
 import me.aleksilassila.litematica.printer.printer.action.Action;
@@ -141,6 +142,10 @@ public class PlacementGuide {
                 if (Configs.Print.BREAK_WRONG_BLOCK.getBooleanValue() && BreakUtils.canBreakBlock(ctx.blockPos)) BreakUtils.INSTANCE.add(ctx);
             }
             case CAULDRON -> {
+                Item bucket = CauldronFill.bucketFor(ctx.currentState, ctx.requiredState);
+                if (bucket != null && Configs.Print.FILL_CAULDRONS.getBooleanValue()) {
+                    return new CauldronFillAction(bucket);
+                }
                 if (Arrays.asList(requiredType.classes).contains(ctx.currentState.getBlock().getClass())) {
                     return null;
                 }

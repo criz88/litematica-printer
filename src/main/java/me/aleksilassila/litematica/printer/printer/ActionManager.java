@@ -1,5 +1,7 @@
 package me.aleksilassila.litematica.printer.printer;
 
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.item.Item;
 import lombok.Setter;
 import me.aleksilassila.litematica.printer.Reference;
 import me.aleksilassila.litematica.printer.config.Configs;
@@ -28,6 +30,8 @@ import net.minecraft.world.entity.player.Input;
 public class ActionManager {
     public static final ActionManager INSTANCE = new ActionManager();
 
+    @Setter
+    private Item cauldronBucket;
     private BlockPos workPos;
     public BlockPos target;
     public Direction side;
@@ -62,6 +66,12 @@ public class ActionManager {
         if (player == null || target == null || side == null || hitModifier == null
                 || !PlayerUtils.canInteracted(workPos) || !PlayerUtils.canInteracted(target)
                 || InventoryUtils.isNonEmptyShulkerBox(player.getMainHandItem())) {
+            clearQueue();
+            return this;
+        }
+        if (CauldronFill.isWaiting() || cauldronBucket != null &&
+                (!Configs.Print.FILL_CAULDRONS.getBooleanValue() || !player.getMainHandItem().is(cauldronBucket)
+                        || !Reference.MINECRAFT.level.getBlockState(target).is(Blocks.CAULDRON))) {
             clearQueue();
             return this;
         }
@@ -106,7 +116,8 @@ public class ActionManager {
         }
         MultiPlayerGameModeExtension gameModeExtension = (MultiPlayerGameModeExtension) Reference.MINECRAFT.gameMode;
         if (gameModeExtension != null) {
-            boolean localPrediction = !Configs.Placement.PRINT_USE_PACKET.getBooleanValue();
+            boolean localPrediction = cauldronBucket == null && !Configs.Placement.PRINT_USE_PACKET.getBooleanValue();
+            if (cauldronBucket != null) CauldronFill.begin(player, target, cauldronBucket);
             BlockHitResult blockHitResult = new BlockHitResult(hitVec, side, target, false);
             gameModeExtension.litematica_printer$useItemOn(localPrediction, InteractionHand.MAIN_HAND, blockHitResult);
         }
@@ -135,6 +146,7 @@ public class ActionManager {
     }
 
     public void clearQueue() {
+        this.cauldronBucket = null;
         this.workPos = null;
         this.target = null;
         this.side = null;

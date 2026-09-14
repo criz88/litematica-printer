@@ -24,6 +24,7 @@ import net.minecraft.world.inventory.ClickType;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 
 //#if MC >= 12105
 import net.minecraft.network.HashedStack;
@@ -53,13 +54,14 @@ public class QuickShulkerUtils {
     private static TrackedShulker activeShulker;
     private static final int OPERATION_TIMEOUT_TICKS = 100;
     private static int operationTicks;
-    private static LocalPlayer operationPlayer;
     private static PendingTransfer pendingTransfer;
+    private static LocalPlayer trackedPlayer;
 
     private QuickShulkerUtils() {}
 
     public static void tick() {
-        if (operationPlayer != null && operationPlayer != mc.player) {
+        if (trackedPlayer != mc.player) {
+            trackedPlayer = mc.player;
             resetOperation();
             itemsToReturn.clear();
             trackedShulkers.clear();
@@ -69,19 +71,26 @@ public class QuickShulkerUtils {
 
         LocalPlayer player = mc.player;
         if (pendingTransfer != null && player != null) {
-            if (player.containerMenu != pendingTransfer.container()) {
+            if (player.containerMenu != pendingTransfer.container) {
                 failOperation(player);
                 return;
             }
-            if (pendingTransfer.isConfirmed(player.getInventory())) {
+            if (pendingTransfer.advance(player.getInventory())) {
                 if (activeShulker != null) {
                     activeShulker.updateContents(getContainerContents(player.containerMenu,
                             player.containerMenu.slots.size() - 36));
                 }
                 if (activeReturnRequest != null) {
                     itemsToReturn.removeFirstOccurrence(activeReturnRequest);
+                    if (activeReturnRequest.isEmptyBucket() && Configs.Print.FILL_CAULDRONS.getBooleanValue()) {
+                        activeReturnRequest = null;
+                        pendingTransfer = null;
+                        operationTicks = 0;
+                        switchFromShulker(); // Return and restock during the same opening.
+                        return;
+                    }
                 } else if (activeShulker != null) {
-                    itemsToReturn.addLast(new ReturnRequest(pendingTransfer.item(), activeShulker));
+                    itemsToReturn.addLast(new ReturnRequest(pendingTransfer.item, activeShulker, -1));
                 }
                 finishShulkerOperation(player);
                 return;
@@ -131,9 +140,11 @@ public class QuickShulkerUtils {
 
         Inventory inventory = player.getInventory();
 
-        if (isInventoryFull(inventory)) {
-            return requestReturn(player, inventory, source, Configs.Print.RETURN_TO_SHULKER_WHEN_FULL.getBooleanValue());
-        }
+        boolean full = isInventoryFull(inventory);
+        if (Configs.Print.FILL_CAULDRONS.getBooleanValue() && (full || Arrays.stream(items)
+                .anyMatch(item -> item == Items.WATER_BUCKET || item == Items.LAVA_BUCKET))
+                && requestReturn(player, source, items, true)) return true;
+        if (full) return requestReturn(player, source, items, false);
 
         for (Item item : items) {
             int shulkerSlot = findShulkerWithItem(player, item);
@@ -154,14 +165,42 @@ public class QuickShulkerUtils {
         return false;
     }
 
-    private static boolean requestReturn(LocalPlayer player, Inventory inventory, ShulkerSource source, boolean exact) {
-        ReturnRequest request = itemsToReturn.peekFirst();
-        if (request == null) return false;
-        int slot = exact ? findReturnShulker(inventory, request) : findAnyShulker(player);
-        if (slot == -1) return false;
-        activeReturnRequest = request;
-        activeShulker = exact ? request.shulker() : null;
-        return openSelectedShulker(inventory, slot, source);
+    /** Called only after both the filled cauldron and the consumed bucket are confirmed. */
+    public static void recordUsedBucket(Item fullBucket, int emptyBucketsBefore) {
+        ReturnRequest origin = null;
+        int pendingBuckets = 0;
+        for (ReturnRequest request : itemsToReturn) {
+            if (request.isEmptyBucket()) pendingBuckets++;
+            else if (origin == null && request.item() == fullBucket) origin = request;
+        }
+        if (origin == null) return; // Personal inventory / TakeItOut / remote stock has no tracked source box.
+        itemsToReturn.removeFirstOccurrence(origin);
+        itemsToReturn.addLast(new ReturnRequest(Items.BUCKET, origin.shulker(),
+                Math.max(0, emptyBucketsBefore - pendingBuckets)));
+    }
+
+    private static boolean requestReturn(LocalPlayer player, ShulkerSource source, Item[] items, boolean buckets) {
+        Inventory inventory = player.getInventory();
+        for (Iterator<ReturnRequest> iterator = itemsToReturn.iterator(); iterator.hasNext();) {
+            ReturnRequest request = iterator.next();
+            if (request.isEmptyBucket() != buckets) continue;
+            int slot = buckets ? findTrackedShulker(inventory, request.shulker(), true)
+                    : Configs.Print.RETURN_TO_SHULKER_WHEN_FULL.getBooleanValue()
+                    ? findReturnShulker(inventory, request) : findAnyShulker(player);
+            if (buckets && (!request.hasBuckets(inventory) || slot < 0)) {
+                iterator.remove();
+                if (slot < 0) MessageUtils.setOverlayMessage(I18n.BUCKET_RETURN_UNAVAILABLE.getName());
+                continue;
+            }
+            if (slot < 0) return false;
+            activeReturnRequest = request;
+            activeShulker = buckets || Configs.Print.RETURN_TO_SHULKER_WHEN_FULL.getBooleanValue()
+                    ? request.shulker() : null;
+            lastNeedItemList.clear();
+            if (buckets) lastNeedItemList.addAll(Arrays.asList(items));
+            return openSelectedShulker(inventory, slot, source);
+        }
+        return false;
     }
 
     private static boolean openSelectedShulker(Inventory inventory, int shulkerSlot, ShulkerSource source) {
@@ -169,7 +208,6 @@ public class QuickShulkerUtils {
         setShulkerBoxSlot(shulkerSlot);
         ModUtils.closeScreen++;
         setOpenHandler(true);
-        operationPlayer = mc.player;
         operationTicks = 0;
         setShulkerCooldown(Configs.Print.SHULKER_COOLDOWN.getIntegerValue());
 
@@ -279,9 +317,19 @@ public class QuickShulkerUtils {
         }
 
         boolean returning = activeReturnRequest != null;
+        if (returning && activeReturnRequest.isEmptyBucket() && !Configs.Print.FILL_CAULDRONS.getBooleanValue()) {
+            finishShulkerOperation(player);
+            return;
+        }
+        if (returning && !activeReturnRequest.hasBuckets(inventory)) {
+            itemsToReturn.removeFirstOccurrence(activeReturnRequest);
+            finishShulkerOperation(player);
+            return;
+        }
         int slots = returning ? Math.min(inventory.getContainerSize(), 36) : ownSlots;
         for (int i = 0; i < slots; i++) {
             ItemStack stack = returning ? inventory.getItem(i) : container.slots.get(i).getItem();
+            if (returning && activeReturnRequest.isEmptyBucket() && !isPlainBucket(stack)) continue;
             if (returning ? stack.is(activeReturnRequest.item())
                     : !stack.isEmpty() && lastNeedItemList.contains(stack.getItem())) {
                 int sourceSlot = i;
@@ -300,37 +348,46 @@ public class QuickShulkerUtils {
             failOperation(mc.player);
             return;
         }
-        if (!hasTransferSpace(container, sourceSlot)) {
+        int destination = findTransferSpace(container, sourceSlot);
+        if (destination < 0) {
             // 未发包，无需等待同步；丢弃无法回塞的请求，避免反复打开同一个满盒。
             itemsToReturn.removeFirstOccurrence(activeReturnRequest);
             MessageUtils.setOverlayMessage(I18n.SHULKER_NO_SPACE.getName());
             finishShulkerOperation(mc.player);
             return;
         }
-        ItemStack stack = container.slots.get(sourceSlot).getItem();
-        PendingTransfer transfer = new PendingTransfer(container, sourceSlot, stack.getItem(), stack.getCount(),
-                countItems(Math.min(inventory.getContainerSize(), 36), inventory::getItem, stack.getItem()),
-                countItems(container.slots.size() - 36, i -> container.slots.get(i).getItem(), stack.getItem()),
-                activeReturnRequest != null);
+        boolean single = activeReturnRequest != null && activeReturnRequest.isEmptyBucket();
+        pendingTransfer = new PendingTransfer(container, sourceSlot, inventory, single ? destination : -1);
+        operationTicks = 0;
+        sendTransferClick(container, sourceSlot, 0, pendingTransfer.split() ? ClickType.PICKUP : ClickType.QUICK_MOVE);
+    }
 
-        // 不预测库存变动，让服务端回传变动槽位后再确认取货或回塞。
+    private static void sendTransferClick(AbstractContainerMenu container, int slot, int button, ClickType type) {
+        ClientPacketListener connection = mc.getConnection();
+        if (connection == null) return;
         //#if MC >= 12105
         connection.send(new ServerboundContainerClickPacket(
-                container.containerId, container.getStateId(), Shorts.checkedCast(sourceSlot),
-                (byte) 0, ClickType.QUICK_MOVE, new Int2ObjectOpenHashMap<>(),
+                container.containerId, container.getStateId(), Shorts.checkedCast(slot),
+                SignedBytes.checkedCast(button), type, new Int2ObjectOpenHashMap<>(),
                 HashedStack.create(container.getCarried(), connection.decoratedHashOpsGenenerator())));
         //#else
         //$$ connection.send(new ServerboundContainerClickPacket(
-        //$$         container.containerId, container.getStateId(), sourceSlot, 0, ClickType.QUICK_MOVE,
+        //$$         container.containerId, container.getStateId(), slot, button, type,
         //$$         container.getCarried().copy(), new Int2ObjectOpenHashMap<>()));
         //#endif
-        pendingTransfer = transfer;
-        operationTicks = 0;
     }
 
-    private static boolean hasTransferSpace(AbstractContainerMenu container, int sourceSlot) {
+    private static boolean isPlainBucket(ItemStack stack) {
+        //#if MC >= 12005
+        return ItemStack.isSameItemSameComponents(stack, new ItemStack(Items.BUCKET));
+        //#else
+        //$$ return ItemStack.isSameItemSameTags(stack, new ItemStack(Items.BUCKET));
+        //#endif
+    }
+
+    private static int findTransferSpace(AbstractContainerMenu container, int sourceSlot) {
         ItemStack stack = container.slots.get(sourceSlot).getItem();
-        if (stack.isEmpty()) return false;
+        if (stack.isEmpty()) return -1;
         int ownSlots = container.slots.size() - 36;
         boolean returning = sourceSlot >= ownSlots;
         for (int i = returning ? 0 : ownSlots; i < (returning ? ownSlots : container.slots.size()); i++) {
@@ -343,9 +400,9 @@ public class QuickShulkerUtils {
                     //#else
                     //$$ ItemStack.isSameItemSameTags(stack, target)
                     //#endif
-            ) return true;
+            ) return i;
         }
-        return false;
+        return -1;
     }
 
     private static int countItems(int slots, IntFunction<ItemStack> stackAt, Item item) {
@@ -357,23 +414,51 @@ public class QuickShulkerUtils {
         return count;
     }
 
-    private record PendingTransfer(AbstractContainerMenu container, int sourceSlot, Item item,
-                                   int sourceCount, int inventoryCount, int containerCount, boolean returning) {
-        private boolean isConfirmed(Inventory inventory) {
-            ItemStack source = container.slots.get(sourceSlot).getItem();
+    /** Shared acknowledgement checks for stack transfers and one-bucket returns. */
+    private static final class PendingTransfer {
+        final AbstractContainerMenu container;
+        final int sourceSlot, sourceCount, inventoryCount, containerCount, destination, destinationCount;
+        final Item item;
+        final boolean returning;
+        int phase;
+
+        PendingTransfer(AbstractContainerMenu container, int sourceSlot, Inventory inventory, int destination) {
+            this.container = container;
+            this.sourceSlot = sourceSlot;
+            this.destination = destination;
+            ItemStack stack = container.slots.get(sourceSlot).getItem();
+            item = stack.getItem();
+            sourceCount = stack.getCount();
+            inventoryCount = countItems(36, inventory::getItem, item);
+            containerCount = countItems(container.slots.size() - 36, i -> container.slots.get(i).getItem(), item);
+            destinationCount = destination < 0 ? 0 : container.slots.get(destination).getItem().getCount();
+            returning = sourceSlot >= container.slots.size() - 36;
+        }
+
+        boolean split() { return destination >= 0 && sourceCount > 1; }
+
+        boolean advance(Inventory inventory) {
+            ItemStack source = container.slots.get(sourceSlot).getItem(), cursor = container.getCarried();
+            if (split() && source.isEmpty() && cursor.is(item) && cursor.getCount() == sourceCount - phase
+                    && container.slots.get(destination).getItem().getCount() == destinationCount + phase && phase < 2
+                    && (phase == 0 || container.slots.get(destination).getItem().is(item))) {
+                // Pick up the stack, place one, then restore the rest; await each server reply.
+                sendTransferClick(container, phase == 0 ? destination : sourceSlot, phase == 0 ? 1 : 0, ClickType.PICKUP);
+                phase++;
+            }
             if (!source.isEmpty() && !source.is(item)) return false;
             int moved = sourceCount - (source.is(item) ? source.getCount() : 0);
-            int inventoryDelta = countItems(Math.min(inventory.getContainerSize(), 36), inventory::getItem, item) - inventoryCount;
+            int inventoryDelta = countItems(36, inventory::getItem, item) - inventoryCount;
             int containerDelta = countItems(container.slots.size() - 36, i -> container.slots.get(i).getItem(), item) - containerCount;
-            return moved > 0 && inventoryDelta == (returning ? -moved : moved)
-                    && containerDelta == -inventoryDelta && container.getCarried().isEmpty();
+            return (destination < 0 ? moved > 0 : moved == 1) && inventoryDelta == (returning ? -moved : moved)
+                    && containerDelta == -inventoryDelta && cursor.isEmpty();
         }
     }
 
     private static void finishShulkerOperation(LocalPlayer player) {
         boolean wasReturn = activeReturnRequest != null;
         if (player != null && player.containerMenu != player.inventoryMenu
-                && (pendingTransfer == null || player.containerMenu == pendingTransfer.container())) {
+                && (pendingTransfer == null || player.containerMenu == pendingTransfer.container)) {
             player.closeContainer();
         }
         resetOperation();
@@ -387,7 +472,6 @@ public class QuickShulkerUtils {
         activeReturnRequest = null;
         activeShulker = null;
         pendingTransfer = null;
-        operationPlayer = null;
         operationTicks = 0;
         lastNeedItemList.clear();
         ModUtils.closeScreen = 0;
@@ -410,15 +494,18 @@ public class QuickShulkerUtils {
         return -1;
     }
 
-    private static int findTrackedShulker(Inventory inventory, TrackedShulker trackedShulker) {
-        for (int i = 9; i < inventory.getContainerSize(); i++) {
+    private static int findTrackedShulker(Inventory inventory, TrackedShulker tracked, boolean requireUnique) {
+        int found = -1;
+        int slots = requireUnique ? Math.min(36, inventory.getContainerSize()) : inventory.getContainerSize();
+        for (int i = 9; i < slots; i++) {
             ItemStack stack = inventory.getItem(i);
-            if (stack.getItem().equals(trackedShulker.boxItem())
-                    && sameContents(getShulkerContents(stack), trackedShulker.contents())) {
-                return i;
+            if (stack.is(tracked.boxItem()) && (!requireUnique || stack.getCount() == 1)
+                    && sameContents(getShulkerContents(stack), tracked.contents())) {
+                if (!requireUnique || i == tracked.lastKnownSlot()) return i;
+                found = found == -1 ? i : -2; // Ambiguous moved source: keep its empty bucket.
             }
         }
-        return -1;
+        return found;
     }
 
     /**
@@ -432,7 +519,7 @@ public class QuickShulkerUtils {
         TrackedShulker tracked = request.shulker();
 
         // L1: 精确匹配
-        int slot = findTrackedShulker(inventory, tracked);
+        int slot = findTrackedShulker(inventory, tracked, false);
         if (slot != -1) return slot;
 
         // L2: 检查记录的槽位
@@ -491,7 +578,12 @@ public class QuickShulkerUtils {
         return true;
     }
 
-    private record ReturnRequest(Item item, TrackedShulker shulker) {}
+    private record ReturnRequest(Item item, TrackedShulker shulker, int retainedBuckets) {
+        private boolean isEmptyBucket() { return retainedBuckets >= 0; }
+        private boolean hasBuckets(Inventory inventory) {
+            return !isEmptyBucket() || countItems(36, inventory::getItem, Items.BUCKET) > retainedBuckets;
+        }
+    }
 
 
 }

@@ -21,6 +21,8 @@ public class I18n {
     public static final I18n ICE_CREATIVE_MODE = of("ice.creative_mode");
     public static final I18n ICE_WATER_TIMEOUT = of("ice.water_timeout");
 
+    public static final I18n CAULDRON_SYNC_TIMEOUT = of("cauldron.sync_timeout");
+    public static final I18n BUCKET_RETURN_UNAVAILABLE = of("cauldron.return_unavailable");
     public static final I18n SHULKER_NO_SPACE = of("shulker.no_space");
     public static final I18n SHULKER_SYNC_TIMEOUT = of("shulker.sync_timeout");
     public static final I18n SHULKER_TRANSFER_NOT_STARTED = of("shulker.transfer_not_started");

@@ -1,4 +1,8 @@
 {
+  "litematica-printer.config.printFillCauldrons": "煉藥鍋自動灌注",
+  "litematica-printer.config.printFillCauldrons.desc": "使用水桶或熔岩桶填滿空煉藥鍋，並於界伏盒補貨時歸還產生的空桶。預設關閉；不調整低水位或轉換已有內容。",
+  "litematica-printer.cauldron.sync_timeout": "煉藥鍋灌注結果未確認，已停止列印，請檢查煉藥鍋與桶。",
+  "litematica-printer.cauldron.return_unavailable": "找不到空桶的來源界伏盒，空桶保留在背包中。",
   "litematica-printer.auto_disable_notice": "印表機已自動關閉",
   "litematica-printer.bedrock.creative_mode": "創造模式無法使用破基岩模式！",
   "litematica-printer.bedrock.mod_missing": "未安裝 Fabric-Bedrock-Miner/Block-Miner 模組，無法破基岩！",

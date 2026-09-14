@@ -1,5 +1,6 @@
 package me.aleksilassila.litematica.printer.handler;
 
+import me.aleksilassila.litematica.printer.printer.CauldronFill;
 import fi.dy.masa.malilib.config.options.ConfigBoolean;
 import fi.dy.masa.malilib.config.options.ConfigOptionList;
 import lombok.Getter;
@@ -219,7 +220,8 @@ public abstract class Module extends ConfigUtils {
     }
 
     private boolean shouldPauseScan() {
-        return QuickShulkerUtils.isOpenHandler() || skipIteration.get() || ActionManager.INSTANCE.needWaitModifyLook;
+        return QuickShulkerUtils.isOpenHandler()
+                || CauldronFill.isWaiting() || skipIteration.get() || ActionManager.INSTANCE.needWaitModifyLook;
     }
 
     private void updateGuiInfo(BlockPos pos, boolean executed) {
