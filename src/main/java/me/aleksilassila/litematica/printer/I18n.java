@@ -31,6 +31,7 @@ public class I18n {
     public static final I18n BREWINGSTAND_RAISE = of("brewingstand.raise");
 
     public static final I18n BLOCK_NO_SUPPORT = of("block.no_support");
+    public static final I18n RAIL_NO_SLOPE_SUPPORT = of("rail.no_slope_support");
     public static final I18n BLOCK_MISMATCH = of("block.mismatch");
 
     private static final String PREFIX_CONFIG = "config";

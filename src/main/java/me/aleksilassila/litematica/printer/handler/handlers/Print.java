@@ -140,6 +140,13 @@ public class Print extends Module {
     @Override
     protected void executeIteration(BlockPos blockPos, AtomicReference<Boolean> skipIteration) {
         placingIceForWater = false;
+        // Rail canSurvive only checks below; skip unsupported slopes without blocking the scan.
+        if (ctx.requiredState.getBlock() instanceof BaseRailBlock rail
+                && !BlockUtils.hasRailSlopeSupport(level, blockPos, ctx.requiredState.getValue(rail.getShapeProperty()))) {
+            MessageUtils.setOverlayMessage(I18n.RAIL_NO_SLOPE_SUPPORT.getName());
+            addHighlight(blockPos, HighlightType.FAILED);
+            return;
+        }
         if (Configs.Print.PRINT_ICE_FOR_WATER.getBooleanValue()
                 && BlockUtils.needsWater(ctx.requiredState)) {
             boolean isWaitingHere = watingForWaterPos != null && watingForWaterPos.equals(blockPos);

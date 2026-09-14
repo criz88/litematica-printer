@@ -9,6 +9,7 @@ import net.minecraft.core.Direction;
 import net.minecraft.core.Vec3i;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
+import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.*;
 import net.minecraft.world.level.block.state.BlockState;
@@ -47,6 +48,15 @@ public class BlockUtils {
 
     public static Direction[] horizontalDirections =
             new Direction[] {Direction.NORTH, Direction.EAST, Direction.SOUTH, Direction.WEST};
+
+    public static boolean hasRailSlopeSupport(BlockGetter level, BlockPos pos, RailShape shape) {
+        return !shape.isSlope() || Block.canSupportRigidBlock(level, switch (shape) {
+            case ASCENDING_EAST -> pos.east();
+            case ASCENDING_WEST -> pos.west();
+            case ASCENDING_NORTH -> pos.north();
+            default -> pos.south();
+        });
+    }
 
     public static boolean isReplaceable(BlockState blockState) {
         //#if MC > 11902
