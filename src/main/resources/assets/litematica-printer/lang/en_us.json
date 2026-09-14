@@ -32,6 +32,7 @@
   "litematica-printer.bedrock.creative_mode": "Bedrock mode cannot be used in creative mode!",
   "litematica-printer.bedrock.mod_missing": "Fabric-Bedrock-Miner/Block-Miner mod not installed, cannot break bedrock!",
   "litematica-printer.block.mismatch": "Block %s has mismatched block below, skipping placement",
+  "litematica-printer.rail.no_slope_support": "Sloped rail has no support at its raised end, skipping placement",
   "litematica-printer.block.no_support": "Block %s has no support below, skipping placement",
   "litematica-printer.brewingstand.lower": "Lower cauldron water level requires §l§6%s",
   "litematica-printer.brewingstand.raise": "Raise cauldron water level requires §l§6%s",

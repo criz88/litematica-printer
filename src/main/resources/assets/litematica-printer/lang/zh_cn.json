@@ -32,6 +32,7 @@
   "litematica-printer.bedrock.creative_mode": "创造模式无法使用破基岩模式！",
   "litematica-printer.bedrock.mod_missing": "未安装 Fabric-Bedrock-Miner/Block-Miner 模组，无法破基岩！",
   "litematica-printer.block.mismatch": "方块 %s 下方方块不相符，跳过放置",
+  "litematica-printer.rail.no_slope_support": "坡道铁轨缺少上坡端支撑，跳过放置",
   "litematica-printer.block.no_support": "方块 %s 下方无支撑，跳过放置",
   "litematica-printer.brewingstand.lower": "降低炼药锅内水位需要 §l§6%s",
   "litematica-printer.brewingstand.raise": "增加炼药锅内水位需要 §l§6%s",

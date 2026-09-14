@@ -6,6 +6,7 @@
   "litematica-printer.ice.water_timeout": "等待水生成逾時（60 tick 內未產生水），印表機已自動關閉！",
   "litematica-printer.brewingstand.lower": "降低煉藥鍋內水位需要 §l§6%s",
   "litematica-printer.brewingstand.raise": "增加煉藥鍋內水位需要 §l§6%s",
+  "litematica-printer.rail.no_slope_support": "斜坡鐵軌缺少上坡端支撐，跳過放置",
   "litematica-printer.block.no_support": "方塊 %s 下方無支撐，跳過放置",
   "litematica-printer.block.mismatch": "方塊 %s 下方方塊不相符，跳過放置",
   "litematica-printer.config.bedrock": "破基岩",
