@@ -5,13 +5,13 @@ import me.aleksilassila.litematica.printer.I18n;
 import me.aleksilassila.litematica.printer.Reference;
 import me.aleksilassila.litematica.printer.printer.action.Action;
 import me.aleksilassila.litematica.printer.printer.action.ClickAction;
+import me.aleksilassila.litematica.printer.printer.action.IceForWaterAction;
 import me.aleksilassila.litematica.printer.config.Configs;
 import me.aleksilassila.litematica.printer.enums.BlockMatchingType;
 import me.aleksilassila.litematica.printer.utils.*;
 import net.fabricmc.fabric.mixin.content.registry.AxeItemAccessor;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.item.Item;
-import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.*;
 import net.minecraft.world.level.block.piston.PistonBaseBlock;
 import net.minecraft.world.level.block.state.properties.*;
@@ -38,6 +38,41 @@ public class PlacementGuide {
     public @Nullable Action getAction(SchematicBlockContext ctx) {
         BlockMatchingType state = BlockMatchingType.get(ctx);
         if (state == BlockMatchingType.CORRECT) return null;
+        if (Configs.Print.SKIP_WATERLOGGED_BLOCK.getBooleanValue()
+                && (BlockUtils.needsWater(ctx.requiredState) || BlockUtils.isLiveCoral(ctx.requiredState))) {
+            return null;
+        }
+        // 先准备水，再检查水生植物能否存活；水源不受用户的可替换方块列表限制。
+        if (Configs.Print.PRINT_ICE_FOR_WATER.getBooleanValue() && BlockUtils.needsWater(ctx.requiredState)) {
+            switch (IceForWaterFlow.decideBuildAction(true,
+                    BlockUtils.isWaterSource(ctx.currentState), ctx.currentState.is(Blocks.ICE),
+                    state == BlockMatchingType.MISSING_BLOCK || ctx.currentState.is(Blocks.WATER),
+                    false,
+                    mc.gameMode != null && !mc.gameMode.getPlayerMode().isCreative())) {
+                case PLACE_ICE, QUEUE_ICE_BREAK -> {
+                    IceForWaterSafety.Result safety = IceForWaterSafety.check(ctx.level, ctx.blockPos);
+                    if (!safety.safe()) {
+                        MessageUtils.setOverlayMessage(safety.message(ctx.level));
+                        return null;
+                    }
+                    // 查询可处理位置不能直接入队破坏；由执行阶段确认目标和安全条件。
+                    return new IceForWaterAction();
+                }
+                case PLACE_BLOCK -> state = BlockMatchingType.MISSING_BLOCK;
+                case SKIP -> {
+                    MessageUtils.setOverlayMessage(mc.gameMode != null && mc.gameMode.getPlayerMode().isCreative()
+                            ? I18n.ICE_CREATIVE_MODE.getName() : I18n.ICE_WATER_UNSAFE.getName());
+                    return null;
+                }
+                case NORMAL -> { }
+            }
+        }
+        // Check after water preparation; missing water must not block clearing incorrect blocks.
+        if (state == BlockMatchingType.MISSING_BLOCK
+                && !BlockUtils.hasWaterForCoralPlacement(ctx.level, ctx.blockPos, ctx.requiredState)) {
+            MessageUtils.setOverlayMessage(I18n.CORAL_NEEDS_WATER.getName());
+            return null;
+        }
         // canSurvive 只阻拦放置（MISSING），不阻拦破坏（ERROR_BLOCK 走 BREAK_WRONG_BLOCK）
         if (state == BlockMatchingType.MISSING_BLOCK && !ctx.requiredState.canSurvive(ctx.level, ctx.blockPos)) return null;
         // 双格方块（玫瑰丛等）：MISSING 时上半部分由下半部分自动生成，不独立放置
@@ -62,53 +97,12 @@ public class PlacementGuide {
     }
 
     private @Nullable Action buildAction(SchematicBlockContext ctx, ClassHook requiredType, BlockMatchingType state) {
-        // 跳过含水方块
-        if (Configs.Print.SKIP_WATERLOGGED_BLOCK.getBooleanValue() && BlockUtils.needsWater(ctx.requiredState)) {
-            return null;
-        }
-        if (Configs.Print.PRINT_ICE_FOR_WATER.getBooleanValue()
-                && BlockUtils.needsWater(ctx.requiredState)) {
-            boolean canGenerateWater = mc.gameMode != null && !mc.gameMode.getPlayerMode().isCreative();
-            switch (IceForWaterFlow.decideBuildAction(
-                    true,
-                    BlockUtils.isWaterSource(ctx.currentState) || BlockUtils.isWaterlogged(ctx.currentState),
-                    ctx.currentState.getBlock() instanceof IceBlock,
-                    state == BlockMatchingType.MISSING_BLOCK,
-                    iceDownCheck(ctx),
-                    canGenerateWater)) {
-                case PLACE_ICE -> {
-                    return new Action().setItem(Items.ICE);
-                }
-                case PLACE_BLOCK -> {
-                    return MissingBlockPlacement.getAction(ctx, requiredType);
-                }
-                case QUEUE_ICE_BREAK -> {
-                    if (!BreakUtils.INSTANCE.inQueue(ctx.blockPos)) BreakUtils.INSTANCE.add(ctx.blockPos);
-                    return new Action().setItem(Items.ICE);
-                }
-                case SKIP -> {
-                    // 创造模式：提示后跳过
-                    if (mc.gameMode != null && mc.gameMode.getPlayerMode().isCreative()
-                            && BlockUtils.needsWater(ctx.requiredState)) {
-                        MessageUtils.setOverlayMessage(I18n.ICE_CREATIVE_MODE.getName());
-                    }
-                    return null;
-                }
-            }
-        }
         return switch (state) {
             case MISSING_BLOCK -> MissingBlockPlacement.getAction(ctx, requiredType);
             case ERROR_BLOCK -> buildActionErrorBlock(ctx, requiredType);
             case ERROR_BLOCK_STATE -> BlockStateCorrection.getAction(mc, ctx, requiredType);
             default -> null;
         };
-    }
-
-    private boolean iceDownCheck(SchematicBlockContext ctx) {
-        Block downBlockState = ctx.level.getBlockState(ctx.blockPos.below()).getBlock();
-        return downBlockState == Blocks.COBWEB
-                || downBlockState == Blocks.BAMBOO_SAPLING
-                || downBlockState instanceof LiquidBlock;
     }
 
     /*** 方块错误：方块类型完全不同，且不满足缺失/状态错误的条件 ***/

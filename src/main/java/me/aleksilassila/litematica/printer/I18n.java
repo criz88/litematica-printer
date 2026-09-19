@@ -19,6 +19,7 @@ public class I18n {
     public static final I18n BEDROCK_NOT_SUPPORT = of("bedrock.not_support");
 
     public static final I18n ICE_CREATIVE_MODE = of("ice.creative_mode");
+    public static final I18n ICE_WATER_UNSAFE = of("ice.water_unsafe");
     public static final I18n ICE_WATER_TIMEOUT = of("ice.water_timeout");
 
     public static final I18n CAULDRON_SYNC_TIMEOUT = of("cauldron.sync_timeout");
@@ -32,6 +33,7 @@ public class I18n {
     public static final I18n BREWINGSTAND_LOWER = of("brewingstand.lower");
     public static final I18n BREWINGSTAND_RAISE = of("brewingstand.raise");
 
+    public static final I18n CORAL_NEEDS_WATER = of("coral.needs_water");
     public static final I18n BLOCK_NO_SUPPORT = of("block.no_support");
     public static final I18n RAIL_NO_SLOPE_SUPPORT = of("rail.no_slope_support");
     public static final I18n BLOCK_MISMATCH = of("block.mismatch");

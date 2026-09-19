@@ -45,7 +45,7 @@ public final class IceForWaterFlow {
         PLACE_ICE,
         /** 目标位置已有纯水源 → 返回放置含水方块 Action（直接放入水中） */
         PLACE_BLOCK,
-        /** 当前是冰块 → 入队挖掘并返回占位 Action（保证 canProcessPos 通过） */
+        /** 当前是冰块 → 返回破冰 Action，由执行阶段入队挖掘 */
         QUEUE_ICE_BREAK,
         /** 下方禁止/无法放冰 → 跳过 */
         SKIP
@@ -55,9 +55,9 @@ public final class IceForWaterFlow {
             boolean isIce, boolean stateIsMissing, boolean belowForbidden, boolean isSurvivalMode) {
         if (!featureEnabled) return BuildDecision.NORMAL;
         if (matchesWaterRequest) return BuildDecision.PLACE_BLOCK;
-        if (isIce) return BuildDecision.QUEUE_ICE_BREAK;
-        if (stateIsMissing) {
+        if (isIce || stateIsMissing) {
             if (!isSurvivalMode || belowForbidden) return BuildDecision.SKIP;
+            if (isIce) return BuildDecision.QUEUE_ICE_BREAK;
             return BuildDecision.PLACE_ICE;
         }
         return BuildDecision.NORMAL;

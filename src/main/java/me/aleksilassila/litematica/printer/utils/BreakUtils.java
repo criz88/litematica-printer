@@ -1,5 +1,6 @@
 package me.aleksilassila.litematica.printer.utils;
 
+import fi.dy.masa.litematica.world.SchematicWorldHandler;
 import fi.dy.masa.malilib.config.IConfigOptionListEntry;
 import fi.dy.masa.malilib.util.restrictions.UsageRestriction;
 import fi.dy.masa.tweakeroo.tweaks.PlacementTweaks;
@@ -8,6 +9,7 @@ import me.aleksilassila.litematica.printer.enums.MiningFilterType;
 import me.aleksilassila.litematica.printer.mixin.extension.BlockBreakResult;
 import me.aleksilassila.litematica.printer.mixin.extension.MultiPlayerGameModeExtension;
 import me.aleksilassila.litematica.printer.printer.SchematicBlockContext;
+import me.aleksilassila.litematica.printer.printer.IceForWaterSafety;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.Minecraft;
@@ -29,6 +31,7 @@ public class BreakUtils {
     private final Queue<BlockPos> breakQueue = new LinkedList<>();
     private final Set<BlockPos> breakSet = new HashSet<>(); // O(1) 查询伴侣
     private BlockPos breakPos;
+    private final Set<BlockPos> iceForWaterBreaks = new HashSet<>();
 
     private BreakUtils() {}
 
@@ -81,6 +84,11 @@ public class BreakUtils {
         breakSet.add(pos);
     }
 
+    public void addIceForWater(BlockPos pos) {
+        iceForWaterBreaks.add(pos.immutable());
+        if (!inQueue(pos) && !isBreaking(pos)) add(pos.immutable());
+    }
+
     public void add(SchematicBlockContext ctx) {
         if (ctx == null) return;
         this.add(ctx.blockPos);
@@ -105,6 +113,7 @@ public class BreakUtils {
                 breakSet.clear();
             }
             stopBreaking();
+            iceForWaterBreaks.clear();
         }
     }
 
@@ -112,6 +121,7 @@ public class BreakUtils {
     public void cancelAll() {
         breakQueue.clear();
         breakSet.clear();
+        iceForWaterBreaks.clear();
         stopBreaking();
     }
 
@@ -119,6 +129,7 @@ public class BreakUtils {
         if (isBreaking(pos)) stopBreaking();
         breakQueue.removeIf(pos::equals);
         breakSet.remove(pos);
+        iceForWaterBreaks.remove(pos);
     }
 
     private void stopBreaking() {
@@ -154,6 +165,7 @@ public class BreakUtils {
                 }
                 breakSet.remove(pos);
                 if (!PlayerUtils.canInteracted(pos) || !canBreakBlock(pos) || !breakRestriction(level.getBlockState(pos))) {
+                    iceForWaterBreaks.remove(pos);
                     continue;
                 }
                 BlockBreakResult breakResult = continueDestroyBlock(pos, Direction.DOWN);
@@ -173,12 +185,34 @@ public class BreakUtils {
         // 所有入口（新目标、队列和持续挖掘）在切工具或发送数据包前复查当前位置。
         if (client.player == null || client.level == null || client.gameMode == null || !PlayerUtils.canInteracted(blockPos)) {
             if (isBreaking(blockPos)) stopBreaking();
+            iceForWaterBreaks.remove(blockPos);
             return BlockBreakResult.FAILED;
+        }
+        if (iceForWaterBreaks.contains(blockPos)) {
+            var schematic = SchematicWorldHandler.getSchematicWorld();
+            if (!Configs.Print.PRINT_ICE_FOR_WATER.getBooleanValue()
+                    || Configs.Print.SKIP_WATERLOGGED_BLOCK.getBooleanValue()
+                    || client.gameMode.getPlayerMode().isCreative()
+                    || !client.level.getBlockState(blockPos).is(Blocks.ICE)
+                    || schematic == null || !BlockUtils.needsWater(schematic.getBlockState(blockPos))) {
+                if (isBreaking(blockPos)) stopBreaking();
+                iceForWaterBreaks.remove(blockPos);
+                return BlockBreakResult.FAILED;
+            }
+            IceForWaterSafety.Result safety = IceForWaterSafety.check(client.level, blockPos);
+            if (!safety.safe()) {
+                if (isBreaking(blockPos)) stopBreaking();
+                iceForWaterBreaks.remove(blockPos);
+                MessageUtils.setOverlayMessage(safety.message(client.level));
+                return BlockBreakResult.FAILED;
+            }
         }
         MultiPlayerGameModeExtension gameMode = (MultiPlayerGameModeExtension) client.gameMode;
         BlockBreakResult result = gameMode.litematica_printer$continueDestroyBlock(localPrediction, blockPos, direction);
         if (result == BlockBreakResult.IN_PROGRESS) {
             breakPos = blockPos;
+        } else {
+            iceForWaterBreaks.remove(blockPos);
         }
         return result;
     }

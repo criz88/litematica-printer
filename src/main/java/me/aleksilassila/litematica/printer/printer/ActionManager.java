@@ -3,10 +3,12 @@ package me.aleksilassila.litematica.printer.printer;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.item.Item;
 import lombok.Setter;
+import me.aleksilassila.litematica.printer.I18n;
 import me.aleksilassila.litematica.printer.Reference;
 import me.aleksilassila.litematica.printer.config.Configs;
 import me.aleksilassila.litematica.printer.mixin.extension.MultiPlayerGameModeExtension;
 import me.aleksilassila.litematica.printer.utils.BlockUtils;
+import me.aleksilassila.litematica.printer.utils.MessageUtils;
 import me.aleksilassila.litematica.printer.utils.InventoryUtils;
 import me.aleksilassila.litematica.printer.utils.PacketUtils;
 import me.aleksilassila.litematica.printer.utils.PlayerUtils;
@@ -15,6 +17,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.NotNull;
@@ -33,6 +36,9 @@ public class ActionManager {
     @Setter
     private Item cauldronBucket;
     private BlockPos workPos;
+    @Setter
+    @Nullable
+    private BlockState coralStateToPlace;
     public BlockPos target;
     public Direction side;
     public Vec3 hitModifier;
@@ -54,6 +60,7 @@ public class ActionManager {
                 return;
             }
         }
+        this.coralStateToPlace = null;
         this.workPos = workPos.immutable();
         this.target = target.immutable();
         this.side = side;
@@ -65,13 +72,22 @@ public class ActionManager {
         // 排队等待转向后，工作位置和实际点击的支撑方块都必须仍在范围内。
         if (player == null || target == null || side == null || hitModifier == null
                 || !PlayerUtils.canInteracted(workPos) || !PlayerUtils.canInteracted(target)
-                || InventoryUtils.isNonEmptyShulkerBox(player.getMainHandItem())) {
+                || InventoryUtils.isNonEmptyShulkerBox(player.getMainHandItem())
+                || (coralStateToPlace != null && (Configs.Print.SKIP_WATERLOGGED_BLOCK.getBooleanValue()
+                    || Reference.MINECRAFT.level == null))) {
             clearQueue();
             return this;
         }
         if (CauldronFill.isWaiting() || cauldronBucket != null &&
                 (!Configs.Print.FILL_CAULDRONS.getBooleanValue() || !player.getMainHandItem().is(cauldronBucket)
                         || !Reference.MINECRAFT.level.getBlockState(target).is(Blocks.CAULDRON))) {
+            clearQueue();
+            return this;
+        }
+        // Water can disappear while the queued placement waits for rotation.
+        if (coralStateToPlace != null
+                && !BlockUtils.hasWaterForCoralPlacement(Reference.MINECRAFT.level, workPos, coralStateToPlace)) {
+            MessageUtils.setOverlayMessage(I18n.CORAL_NEEDS_WATER.getName());
             clearQueue();
             return this;
         }
@@ -146,6 +162,7 @@ public class ActionManager {
     }
 
     public void clearQueue() {
+        this.coralStateToPlace = null;
         this.cauldronBucket = null;
         this.workPos = null;
         this.target = null;

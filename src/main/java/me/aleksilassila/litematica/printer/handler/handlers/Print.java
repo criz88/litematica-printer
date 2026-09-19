@@ -14,6 +14,7 @@ import me.aleksilassila.litematica.printer.printer.*;
 import me.aleksilassila.litematica.printer.printer.action.Action;
 import me.aleksilassila.litematica.printer.printer.ActionManager;
 import me.aleksilassila.litematica.printer.printer.action.ClickAction;
+import me.aleksilassila.litematica.printer.printer.action.IceForWaterAction;
 import me.aleksilassila.litematica.printer.printer.MissingMaterialTracker;
 import me.aleksilassila.litematica.printer.utils.*;
 import net.minecraft.core.BlockPos;
@@ -147,11 +148,14 @@ public class Print extends Module {
             addHighlight(blockPos, HighlightType.FAILED);
             return;
         }
-        if (Configs.Print.PRINT_ICE_FOR_WATER.getBooleanValue()
-                && BlockUtils.needsWater(ctx.requiredState)) {
+        if (!(action instanceof IceForWaterAction) && blockPos.equals(watingForWaterPos)) {
+            watingForWaterPos = null;
+            watingForWaterTicks = 0;
+        }
+        if (action instanceof IceForWaterAction) {
             boolean isWaitingHere = watingForWaterPos != null && watingForWaterPos.equals(blockPos);
-            boolean isIce = ctx.currentState.getBlock() instanceof IceBlock;
-            boolean matchesWaterRequest = BlockUtils.isWaterSource(ctx.currentState) || BlockUtils.isWaterlogged(ctx.currentState);
+            boolean isIce = ctx.currentState.is(Blocks.ICE);
+            boolean matchesWaterRequest = BlockUtils.isWaterSource(ctx.currentState);
             // 等待标记过期：连续 WAIT_ACK_GRACE_TICKS 个等待tick内无冰无水且无待挖掘任务（如水被玩家/活塞移除）
             // 才清除标记。宽限期覆盖冰块放置/破坏后的 ack 往返，避免重放冰破坏刚生成的水源。
             if (isWaitingHere && !isIce && !matchesWaterRequest && !BreakUtils.INSTANCE.inQueue(blockPos)
@@ -257,19 +261,20 @@ public class Print extends Module {
             useShift = action.getShift();
         }
         action.queueAction(blockPos, side, useShift, player);
-        // 放冰完成：入队挖掘并进入等待水生成
+        // 放冰完成：等待实际冰块出现，再入队破冰
         if (placingIceForWater) {
             placingIceForWater = false;
             ActionManager.INSTANCE.setLook(action.getPlayerLook());
             ActionManager.INSTANCE.setNeedWaitModifyLookFromAction(action.getNeedWaitModifyLook());
             ActionManager.INSTANCE.sendQueue(player);
-            ensureIceBreakQueued(blockPos);
             watingForWaterPos = blockPos.immutable();
             watingForWaterTicks = 0;
             enterWaiting(blockPos);
             skipIteration.set(true);
             return;
         }
+        if (BlockUtils.isLiveCoral(ctx.requiredState))
+            ActionManager.INSTANCE.setCoralStateToPlace(ctx.requiredState);
         Vec3 hitModifier = LitematicaUtils.usePrecisionPlacement(blockPos, ctx.requiredState);
         if (hitModifier != null) {
             ActionManager.INSTANCE.hitModifier = hitModifier;
@@ -298,7 +303,7 @@ public class Print extends Module {
 
     private void ensureIceBreakQueued(BlockPos pos) {
         if (!BreakUtils.INSTANCE.inQueue(pos) && !BreakUtils.INSTANCE.isBreaking(pos)) {
-            BreakUtils.INSTANCE.add(pos);
+            BreakUtils.INSTANCE.addIceForWater(pos);
         }
     }
 
