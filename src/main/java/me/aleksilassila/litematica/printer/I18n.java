@@ -22,6 +22,12 @@ public class I18n {
     public static final I18n ICE_WATER_UNSAFE = of("ice.water_unsafe");
     public static final I18n ICE_WATER_TIMEOUT = of("ice.water_timeout");
 
+    public static final I18n CAULDRON_SYNC_TIMEOUT = of("cauldron.sync_timeout");
+    public static final I18n BUCKET_RETURN_UNAVAILABLE = of("cauldron.return_unavailable");
+    public static final I18n SHULKER_NO_SPACE = of("shulker.no_space");
+    public static final I18n SHULKER_SYNC_TIMEOUT = of("shulker.sync_timeout");
+    public static final I18n SHULKER_TRANSFER_NOT_STARTED = of("shulker.transfer_not_started");
+
     public static final I18n INVENTORY_BACKPACK_FULL = of("inventory.backpack_full");
 
     public static final I18n BREWINGSTAND_LOWER = of("brewingstand.lower");
@@ -29,6 +35,7 @@ public class I18n {
 
     public static final I18n CORAL_NEEDS_WATER = of("coral.needs_water");
     public static final I18n BLOCK_NO_SUPPORT = of("block.no_support");
+    public static final I18n RAIL_NO_SLOPE_SUPPORT = of("rail.no_slope_support");
     public static final I18n BLOCK_MISMATCH = of("block.mismatch");
 
     private static final String PREFIX_CONFIG = "config";

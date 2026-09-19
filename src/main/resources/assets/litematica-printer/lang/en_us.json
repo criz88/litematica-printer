@@ -1,5 +1,9 @@
 {
   "litematica-printer.coral.needs_water": "Live coral needs water at its position or in an adjacent block; waiting to place",
+  "litematica-printer.config.printFillCauldrons": "Fill cauldrons",
+  "litematica-printer.config.printFillCauldrons.desc": "Fill empty cauldrons with water or lava buckets and return the resulting empty buckets when restocking from shulkers. Off by default; does not adjust partial levels or replace existing contents.",
+  "litematica-printer.cauldron.sync_timeout": "Cauldron fill was not confirmed. Printer stopped; check the cauldron and bucket.",
+  "litematica-printer.cauldron.return_unavailable": "Cannot identify the source shulker box. Empty bucket kept in inventory.",
   "litematica-printer.config.trenchSelectionType": "Selection Type",
   "litematica-printer.config.trenchSelectionType.desc": "Work area within the selection:\n§dFull Projection§r: Process the full area selection (default)\n§dVisible Area§r: Process only the current Litematica render layer\n§dBelow Player§r: Process up to the player's block height\n§dAbove Player§r: Process from the player's height rounded up\nThe center and end walls always follow the original subregion bounds.",
   "litematica-printer.config.trenchIncludeFlowing": "Include Flowing Liquids",
@@ -33,6 +37,7 @@
   "litematica-printer.bedrock.creative_mode": "Bedrock mode cannot be used in creative mode!",
   "litematica-printer.bedrock.mod_missing": "Fabric-Bedrock-Miner/Block-Miner mod not installed, cannot break bedrock!",
   "litematica-printer.block.mismatch": "Block %s has mismatched block below, skipping placement",
+  "litematica-printer.rail.no_slope_support": "Sloped rail has no support at its raised end, skipping placement",
   "litematica-printer.block.no_support": "Block %s has no support below, skipping placement",
   "litematica-printer.brewingstand.lower": "Lower cauldron water level requires §l§6%s",
   "litematica-printer.brewingstand.raise": "Raise cauldron water level requires §l§6%s",
@@ -316,5 +321,8 @@
   "litematica-printer.update.repository": "Code repository:",
   "modmenu.descriptionTranslation.litematica-printer": "An extension for Litematica that adds the missing printer functionality, allowing you to automatically build schematics.",
   "modmenu.nameTranslation.litematica-printer": "Litematica Printer",
-  "litematica-printer.bedrock.not_support": "Not supported in original Bedrock Miner, please use bunnyi port version"
+  "litematica-printer.bedrock.not_support": "Not supported in original Bedrock Miner, please use bunnyi port version",
+  "litematica-printer.shulker.no_space": "No available destination slot for the shulker transfer. Operation skipped; printer remains enabled.",
+  "litematica-printer.shulker.sync_timeout": "Shulker inventory synchronization timed out or was interrupted, printer disabled!",
+  "litematica-printer.shulker.transfer_not_started": "Could not start the shulker item transfer."
 }

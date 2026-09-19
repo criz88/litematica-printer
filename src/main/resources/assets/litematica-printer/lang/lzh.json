@@ -1,9 +1,14 @@
 {
   "litematica-printer.coral.needs_water": "活珊無水可養，候而後置",
+  "litematica-printer.config.printFillCauldrons": "自灌煉藥鍋",
+  "litematica-printer.config.printFillCauldrons.desc": "以水桶或熔岩桶灌滿空鍋，補貨時還空桶於界伏盒。預設閉；不調水位，不易鍋中物。",
+  "litematica-printer.cauldron.sync_timeout": "煉藥鍋灌注未驗，印機已停，請察鍋桶。",
+  "litematica-printer.cauldron.return_unavailable": "未尋得空桶所出之界伏盒，桶留囊中。",
   "litematica-printer.auto_disable_notice": "印機自閉",
   "litematica-printer.bedrock.creative_mode": "創世之際，不可破基岩！",
   "litematica-printer.bedrock.mod_missing": "未載 Fabric-Bedrock-Miner/Block-Miner 之模，不能破基岩！",
   "litematica-printer.block.mismatch": "方塊 %s 下不合，置而弗為",
+  "litematica-printer.rail.no_slope_support": "斜軌高端無支，置而弗為",
   "litematica-printer.block.no_support": "方塊 %s 下無支，置而弗為",
   "litematica-printer.brewingstand.lower": "降煉藥鍋水，須 §l§6%s",
   "litematica-printer.brewingstand.raise": "增煉藥鍋水，須 §l§6%s",
@@ -287,5 +292,8 @@
   "litematica-printer.update.repository": "代碼倉：",
   "modmenu.descriptionTranslation.litematica-printer": "Litematica 之擴展，補全所缺印機之能，可依圖自動營造。",
   "modmenu.nameTranslation.litematica-printer": "投影印機",
-  "litematica-printer.bedrock.not_support": "暫不支援原版 Bedrock Miner，請用 bunnyi 分支版"
+  "litematica-printer.bedrock.not_support": "暫不支援原版 Bedrock Miner，請用 bunnyi 分支版",
+  "litematica-printer.shulker.no_space": "潛影盒移物無可納之格，此次略過，印機仍啟。",
+  "litematica-printer.shulker.sync_timeout": "潛影盒物品同步逾時或中斷，印機已闔！",
+  "litematica-printer.shulker.transfer_not_started": "潛影盒移物未能啟行。"
 }

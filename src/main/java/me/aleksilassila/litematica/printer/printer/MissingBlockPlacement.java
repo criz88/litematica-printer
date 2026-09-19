@@ -26,6 +26,10 @@ final class MissingBlockPlacement {
     /*** 缺失方块：实际位置为空，或当前方块在可替换列表中且启用了替换功能 ***/
     static @Nullable Action getAction(SchematicBlockContext ctx, ClassHook requiredType) {
         switch (requiredType) {
+            case CAULDRON -> {
+                return ctx.requiredState.is(Blocks.CAULDRON) || Configs.Print.FILL_CAULDRONS.getBooleanValue()
+                        ? new Action().setItem(Items.CAULDRON) : null;
+            }
             case TORCH -> {
                 return DirectionalBlockPlacement.getAction(ctx, requiredType);
             }

@@ -1,5 +1,7 @@
 package me.aleksilassila.litematica.printer.printer;
 
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.item.Item;
 import lombok.Setter;
 import me.aleksilassila.litematica.printer.I18n;
 import me.aleksilassila.litematica.printer.Reference;
@@ -7,6 +9,7 @@ import me.aleksilassila.litematica.printer.config.Configs;
 import me.aleksilassila.litematica.printer.mixin.extension.MultiPlayerGameModeExtension;
 import me.aleksilassila.litematica.printer.utils.BlockUtils;
 import me.aleksilassila.litematica.printer.utils.MessageUtils;
+import me.aleksilassila.litematica.printer.utils.InventoryUtils;
 import me.aleksilassila.litematica.printer.utils.PacketUtils;
 import me.aleksilassila.litematica.printer.utils.PlayerUtils;
 import net.minecraft.client.player.LocalPlayer;
@@ -30,6 +33,8 @@ import net.minecraft.world.entity.player.Input;
 public class ActionManager {
     public static final ActionManager INSTANCE = new ActionManager();
 
+    @Setter
+    private Item cauldronBucket;
     private BlockPos workPos;
     @Setter
     @Nullable
@@ -67,8 +72,15 @@ public class ActionManager {
         // 排队等待转向后，工作位置和实际点击的支撑方块都必须仍在范围内。
         if (player == null || target == null || side == null || hitModifier == null
                 || !PlayerUtils.canInteracted(workPos) || !PlayerUtils.canInteracted(target)
+                || InventoryUtils.isNonEmptyShulkerBox(player.getMainHandItem())
                 || (coralStateToPlace != null && (Configs.Print.SKIP_WATERLOGGED_BLOCK.getBooleanValue()
                     || Reference.MINECRAFT.level == null))) {
+            clearQueue();
+            return this;
+        }
+        if (CauldronFill.isWaiting() || cauldronBucket != null &&
+                (!Configs.Print.FILL_CAULDRONS.getBooleanValue() || !player.getMainHandItem().is(cauldronBucket)
+                        || !Reference.MINECRAFT.level.getBlockState(target).is(Blocks.CAULDRON))) {
             clearQueue();
             return this;
         }
@@ -120,7 +132,8 @@ public class ActionManager {
         }
         MultiPlayerGameModeExtension gameModeExtension = (MultiPlayerGameModeExtension) Reference.MINECRAFT.gameMode;
         if (gameModeExtension != null) {
-            boolean localPrediction = !Configs.Placement.PRINT_USE_PACKET.getBooleanValue();
+            boolean localPrediction = cauldronBucket == null && !Configs.Placement.PRINT_USE_PACKET.getBooleanValue();
+            if (cauldronBucket != null) CauldronFill.begin(player, target, cauldronBucket);
             BlockHitResult blockHitResult = new BlockHitResult(hitVec, side, target, false);
             gameModeExtension.litematica_printer$useItemOn(localPrediction, InteractionHand.MAIN_HAND, blockHitResult);
         }
@@ -150,6 +163,7 @@ public class ActionManager {
 
     public void clearQueue() {
         this.coralStateToPlace = null;
+        this.cauldronBucket = null;
         this.workPos = null;
         this.target = null;
         this.side = null;

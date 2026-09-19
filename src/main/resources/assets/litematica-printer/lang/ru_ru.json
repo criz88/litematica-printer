@@ -1,9 +1,14 @@
 {
   "litematica-printer.coral.needs_water": "Живому кораллу нужна вода на его месте или в соседнем блоке; ожидание размещения",
+  "litematica-printer.config.printFillCauldrons": "Заполнение котлов",
+  "litematica-printer.config.printFillCauldrons.desc": "Заполнять пустые котлы вёдрами воды или лавы и возвращать пустые вёдра при пополнении из шалкеров. По умолчанию выключено; уровень и содержимое заполненных котлов не изменяются.",
+  "litematica-printer.cauldron.sync_timeout": "Заполнение котла не подтверждено. Принтер остановлен; проверьте котёл и ведро.",
+  "litematica-printer.cauldron.return_unavailable": "Не удалось определить исходный шалкеровый ящик. Пустое ведро оставлено в инвентаре.",
   "litematica-printer.auto_disable_notice": "Принтер автоматически отключён",
   "litematica-printer.bedrock.creative_mode": "Режим бедрока недоступен в творческом режиме!",
   "litematica-printer.bedrock.mod_missing": "Мод Fabric-Bedrock-Miner/Block-Miner не установлен — разрушение бедрока недоступно!",
   "litematica-printer.block.mismatch": "Блок %s имеет несовместимый блок снизу — размещение пропущено",
+  "litematica-printer.rail.no_slope_support": "У наклонных рельсов нет опоры под верхним концом — размещение пропущено",
   "litematica-printer.block.no_support": "Блок %s не имеет опоры снизу — размещение пропущено",
   "litematica-printer.brewingstand.lower": "Для понижения уровня воды в котле требуется §l§6%s",
   "litematica-printer.brewingstand.raise": "Для повышения уровня воды в котле требуется §l§6%s",
@@ -286,5 +291,8 @@
   "litematica-printer.update.repository": "Репозиторий кода:",
   "modmenu.descriptionTranslation.litematica-printer": "Расширение для Litematica, добавляющее недостающую функцию принтера, позволяющую автоматически строить по схемам.",
   "modmenu.nameTranslation.litematica-printer": "Litematica Printer",
-  "litematica-printer.bedrock.not_support": "Не поддерживается в оригинальной версии Bedrock Miner, используйте версию bunnyi"
+  "litematica-printer.bedrock.not_support": "Не поддерживается в оригинальной версии Bedrock Miner, используйте версию bunnyi",
+  "litematica-printer.shulker.no_space": "Нет доступного слота для переноса предметов шалкера. Операция пропущена; принтер остаётся включённым.",
+  "litematica-printer.shulker.sync_timeout": "Синхронизация шалкера прервана или превысила время ожидания, принтер отключён!",
+  "litematica-printer.shulker.transfer_not_started": "Не удалось начать перенос предметов между шалкером и инвентарём."
 }

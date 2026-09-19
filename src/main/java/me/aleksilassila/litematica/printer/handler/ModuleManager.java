@@ -1,5 +1,6 @@
 package me.aleksilassila.litematica.printer.handler;
 
+import me.aleksilassila.litematica.printer.printer.CauldronFill;
 import com.google.common.collect.ImmutableList;
 import lombok.Getter;
 import lombok.Setter;
@@ -59,11 +60,15 @@ public class ModuleManager {
     }
 
     public static void tick() {
+        CauldronFill.tick();
+        if (CauldronFill.isWaiting()) return;
+        QuickShulkerUtils.tick();
+        if (QuickShulkerUtils.isOpenHandler()) return;
+
         // If TakeItOut is waiting for a server-side shulker extraction, skip
         // all processing so the printer does not interfere.
         if (TakeItOutCompat.isAwaitingItem()) return;
 
-        QuickShulkerUtils.tick();
         if (ModUtils.isRemoteInventoryNextLoaded()) {
             RemoteContainerUtils.tick();
         }
@@ -82,7 +87,8 @@ public class ModuleManager {
             ActionManager.INSTANCE.clearQueue();
             return;
         }
-        if (ActionManager.INSTANCE.sendQueue(mc.player).needWaitModifyLook) {
+        if (ActionManager.INSTANCE.sendQueue(mc.player).needWaitModifyLook
+                || CauldronFill.isWaiting()) {
             return;
         }
 
@@ -104,6 +110,8 @@ public class ModuleManager {
                 }
             }
             module.tick();
+            if (QuickShulkerUtils.isOpenHandler()
+                    || CauldronFill.isWaiting()) return;
         }
     }
 
